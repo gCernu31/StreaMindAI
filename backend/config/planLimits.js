@@ -11,6 +11,23 @@
 
 export const PLAN_LIMITS = {
 
+  free: {
+    channelMessagesPerSession: 0,   // nessuna risposta AI
+    monthlyMessages:           0,
+
+    members:             0,
+    songRequest:         false,
+    memory:              false,
+    discord:             false,
+    analytics:           false,
+    customEventMessages: false,
+    trial:               false,
+
+    events: ['follow', 'subscribe', 'gift_sub', 'cheer', 'raid'],
+
+    userLimits: null,
+  },
+
   starter: {
     // Limiti hard
     channelMessagesPerSession: 200,
@@ -112,6 +129,7 @@ export function getLimits(plan) {
 
 /** Nomi leggibili dei piani */
 export const PLAN_LABELS = {
+  free:      'Free',
   starter:   'Starter',
   creator:   'Creator',
   elite:     'Elite',
@@ -120,6 +138,7 @@ export const PLAN_LABELS = {
 
 /** Prezzi mensili in euro */
 export const PLAN_PRICES = {
+  free:      0,
   starter:   9,
   creator:   19,
   elite:     35,

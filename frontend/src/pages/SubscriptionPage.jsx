@@ -5,6 +5,19 @@ import { getToken } from '../utils/auth.js';
 // ─── Piani ────────────────────────────────────────────────────────────────────
 const PLANS = [
   {
+    id: 'free',
+    name: 'Free',
+    price: 0,
+    features: [
+      'Bot presente in chat',
+      'Showstarter automatico al go-live',
+      'Comando !lurk integrato',
+      'Messaggi evento base (follow, sub, gift, cheer, raid)',
+      'Nessuna risposta AI',
+      'Nessun limite di tempo',
+    ],
+  },
+  {
     id: 'starter',
     name: 'Starter',
     price: 9,
@@ -451,9 +464,10 @@ export default function SubscriptionPage() {
       </div>
 
       {/* ── Piani ── */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 mb-10">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-5 mb-10">
         {PLANS.map(plan => {
-          const isCurrent = sub?.plan === plan.id && isActive;
+          const isCurrent    = sub?.plan === plan.id && isActive;
+          const isCurrentFree = plan.id === 'free' && !isActive;
           return (
             <div
               key={plan.id}
@@ -485,8 +499,14 @@ export default function SubscriptionPage() {
 
               <div className="font-bold text-lg mb-1">{plan.name}</div>
               <div className="mb-5">
-                <span className="text-3xl font-extrabold" style={{ color: '#8B5CF6' }}>{plan.price}€</span>
-                <span className="text-hally-text-muted text-sm">/mese</span>
+                {plan.price === 0 ? (
+                  <span className="text-3xl font-extrabold" style={{ color: '#8B5CF6' }}>Gratis</span>
+                ) : (
+                  <>
+                    <span className="text-3xl font-extrabold" style={{ color: '#8B5CF6' }}>{plan.price}€</span>
+                    <span className="text-hally-text-muted text-sm">/mese</span>
+                  </>
+                )}
               </div>
 
               <ul className="space-y-2.5 mb-6 flex-1">
@@ -498,9 +518,13 @@ export default function SubscriptionPage() {
                 ))}
               </ul>
 
-              {isCurrent ? (
+              {(isCurrent || isCurrentFree) ? (
                 <button disabled className="btn-secondary w-full text-sm opacity-50 cursor-not-allowed">
                   Piano attuale
+                </button>
+              ) : plan.id === 'free' ? (
+                <button disabled className="btn-secondary w-full text-sm opacity-50 cursor-not-allowed">
+                  Già incluso
                 </button>
               ) : plan.id === 'signature' ? (
                 <button

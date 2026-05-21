@@ -43,6 +43,9 @@ const EVENT_COOLDOWN_MS = 30_000;
 const MSG_USER_LIMIT    = "Hai raggiunto il limite di messaggi per stasera! Chiedi allo streamer di aumentare i limiti o supporta il canale con una sub 🎵";
 const MSG_CHANNEL_LIMIT = "Il bot ha raggiunto il limite di messaggi per stasera. Scopri i piani superiori su streamindai.com 🚀";
 
+const PAID_PLANS    = new Set(['starter', 'creator', 'elite', 'signature']);
+const ACTIVE_STATUS = new Set(['active', 'trialing', 'cancelling']);
+
 // ─── Stato in-memory ──────────────────────────────────────────────────────────
 
 // Contatori sessione canale: streamerId → { date: string, count: number }
@@ -68,6 +71,12 @@ const userCache = new Map();
 
 // Buffer messaggi per generazione note: `${streamerId}:${username}` → string[]
 const userMessageBuffers = new Map();
+
+// Debounce showstarter per canale: streamerId → timestamp dell'ultima pianificazione
+const showstarterCooldowns = new Map();
+
+// Utenti in lurk per sessione: streamerId → Set<username>
+const lurkSessionUsers = new Map();
 
 // Twitch app token (per EventSub)
 let _appToken = null, _appTokenExp = 0, _botUserId = null;
@@ -789,6 +798,7 @@ async function loadActiveStreamers() {
       s.twitch_id,
       s.twitch_username,
       s.subscription_plan,
+      s.subscription_status,
       s.chat_messages_count,
       s.event_messages_count,
       s.monthly_reset_date,
@@ -811,10 +821,12 @@ async function loadActiveStreamers() {
       bc.song_req_subvip
     FROM streamers s
     JOIN bot_configs bc ON bc.streamer_id = s.id
-    WHERE s.subscription_status IN ('active', 'trialing', 'cancelling')
-      AND s.twitch_username IS NOT NULL
+    WHERE s.twitch_username IS NOT NULL
       AND s.twitch_username <> ''
-      AND (bc.bot_active IS NULL OR bc.bot_active = TRUE)
+      AND (
+        bc.bot_active = TRUE
+        OR (bc.bot_active IS NULL AND s.subscription_status IN ('active', 'trialing', 'cancelling'))
+      )
   `);
   return rows;
 }
@@ -1156,11 +1168,32 @@ class BotManager {
       return;
     }
 
-    // 3. Comando AI principale: !<nome_bot>
+    // 3. Lurk
+    if (lowerMsg === '!lurk') {
+      await this._handleLurk(channel, streamer, username);
+      return;
+    }
+
+    // 4. Comando AI principale: !<nome_bot>
     const botCmd = '!' + (streamer.bot_name || 'streambot').toLowerCase().replace(/\s+/g, '');
     if (!lowerMsg.startsWith(botCmd)) return;
 
     await this._handleBotCommand(channel, tags, streamer, msg, username, isSub, botCmd);
+  }
+
+  async _handleLurk(channel, streamer, username) {
+    const lurkers = lurkSessionUsers.get(streamer.streamer_id) ?? new Set();
+    if (lurkers.has(username)) return;
+    lurkers.add(username);
+    lurkSessionUsers.set(streamer.streamer_id, lurkers);
+
+    const msgs = [
+      `@${username} si nasconde nell'ombra… ma noi sappiamo che sei lì 👀`,
+      `@${username} è entrato in modalità fantasma! Ci vediamo quando vuoi 🌙`,
+      `@${username} sta lurkando in silenzio — rispettiamo! 🤫`,
+      `@${username} è in lurk mode: presenza silenziosa, supporto massimo ❤️`,
+    ];
+    try { await this.client.say(channel, msgs[Math.floor(Math.random() * msgs.length)]); } catch {}
   }
 
   async _handleCustomCommand(channel, streamer, msg) {
@@ -1178,6 +1211,14 @@ class BotManager {
   }
 
   async _handleBotCommand(channel, tags, streamer, msg, username, isSub, botCmd) {
+    // Piano gratuito: AI non disponibile — invita all'upgrade
+    if (!PAID_PLANS.has(streamer.subscription_plan) || !ACTIVE_STATUS.has(streamer.subscription_status)) {
+      try {
+        await this.client.say(channel, `@${username} Attiva StreaMindAI su streamindai.com per interagire con me! 🚀`);
+      } catch {}
+      return;
+    }
+
     const limits = getLimits(streamer.subscription_plan);
 
     // Reset mensile se necessario
@@ -1537,6 +1578,17 @@ class BotManager {
           })
           .catch(e => console.warn(`[Category] stream.online @${streamer.twitch_username}:`, e.message));
       }
+      // Showstarter: messaggio di benvenuto 60s dopo il go-live (debounce 10min)
+      const now = Date.now();
+      if (now - (showstarterCooldowns.get(streamer.streamer_id) ?? 0) > 10 * 60_000) {
+        showstarterCooldowns.set(streamer.streamer_id, now);
+        const botCmd = '!' + (streamer.bot_name || 'streambot').toLowerCase().replace(/\s+/g, '');
+        setTimeout(async () => {
+          if (!this.connected) return;
+          const msg = `🎮 La live è partita! Sono ${streamer.bot_name || 'StreamBot'}, il bot AI del canale. Scrivete ${botCmd} per interagire con me!`;
+          try { await this.client.say(channel, msg); } catch {}
+        }, 60_000);
+      }
       return;
     }
 
@@ -1546,6 +1598,7 @@ class BotManager {
       if (q) { q.songs = []; q.srCounts = new Map(); }
       currentGames.set(streamer.streamer_id, null);
       channelHistory.delete(streamer.streamer_id);
+      lurkSessionUsers.delete(streamer.streamer_id);
       console.log(`[Bot] Stream offline: #${streamer.twitch_username} — contatori sessione azzerati`);
       return;
     }

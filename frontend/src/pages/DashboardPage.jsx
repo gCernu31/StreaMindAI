@@ -79,34 +79,62 @@ function formatExpiry(iso) {
 }
 
 // ---------------------------------------------------------------------------
-// Banner trial per utenti senza abbonamento
+// Banner upgrade per utenti free/inattivi
 // ---------------------------------------------------------------------------
 
-function TrialBanner() {
+function FreePlanBanner() {
   return (
-    <div
-      className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 rounded-xl border px-5 py-4"
-      style={{
-        background:   'linear-gradient(135deg, rgba(139,92,246,0.1) 0%, rgba(139,92,246,0.04) 100%)',
-        borderColor:  'rgba(139,92,246,0.3)',
-      }}
-    >
-      <div className="flex items-center gap-3">
-        <span className="text-2xl">🚀</span>
-        <div>
-          <p className="text-sm font-bold text-hally-text">Prova StreaMindAI gratis per 7 giorni</p>
-          <p className="text-xs text-hally-text-muted mt-0.5">Nessun addebito oggi. Disdici in qualsiasi momento.</p>
-        </div>
-      </div>
-      <Link
-        to="/subscription"
-        className="self-start sm:self-auto inline-flex items-center gap-2 font-bold text-white text-sm px-5 py-3 rounded-xl flex-shrink-0 min-h-[44px] transition-all duration-150"
-        style={{ backgroundColor: '#8B5CF6' }}
-        onMouseEnter={e => e.currentTarget.style.backgroundColor = '#7C3AED'}
-        onMouseLeave={e => e.currentTarget.style.backgroundColor = '#8B5CF6'}
+    <div className="space-y-3">
+      {/* Banner informativo free */}
+      <div
+        className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 rounded-xl border px-5 py-4"
+        style={{ background: 'rgba(139,92,246,0.04)', borderColor: 'rgba(139,92,246,0.15)' }}
       >
-        Inizia la prova gratuita →
-      </Link>
+        <div className="flex items-center gap-3">
+          <span className="text-xl">💡</span>
+          <div>
+            <p className="text-sm font-semibold text-hally-text">Sei sul piano Free</p>
+            <p className="text-xs text-hally-text-muted mt-0.5">
+              Il bot è attivo in chat (showstarter + !lurk), ma le risposte AI richiedono un piano a pagamento.
+            </p>
+          </div>
+        </div>
+        <Link
+          to="/subscription"
+          className="self-start sm:self-auto inline-flex items-center gap-2 text-sm font-semibold px-4 py-2.5 rounded-xl whitespace-nowrap transition-colors"
+          style={{ backgroundColor: 'rgba(139,92,246,0.12)', color: '#8B5CF6', border: '1px solid rgba(139,92,246,0.25)' }}
+          onMouseEnter={e => e.currentTarget.style.backgroundColor = 'rgba(139,92,246,0.2)'}
+          onMouseLeave={e => e.currentTarget.style.backgroundColor = 'rgba(139,92,246,0.12)'}
+        >
+          Sblocca l'AI →
+        </Link>
+      </div>
+
+      {/* CTA trial prominente */}
+      <div
+        className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 rounded-xl border px-5 py-4"
+        style={{
+          background:  'linear-gradient(135deg, rgba(139,92,246,0.1) 0%, rgba(139,92,246,0.04) 100%)',
+          borderColor: 'rgba(139,92,246,0.3)',
+        }}
+      >
+        <div className="flex items-center gap-3">
+          <span className="text-2xl">🚀</span>
+          <div>
+            <p className="text-sm font-bold text-hally-text">Prova StreaMindAI gratis per 7 giorni</p>
+            <p className="text-xs text-hally-text-muted mt-0.5">Nessun addebito oggi. Disdici in qualsiasi momento.</p>
+          </div>
+        </div>
+        <Link
+          to="/subscription"
+          className="self-start sm:self-auto inline-flex items-center gap-2 font-bold text-white text-sm px-5 py-3 rounded-xl flex-shrink-0 min-h-[44px] transition-all duration-150"
+          style={{ backgroundColor: '#8B5CF6' }}
+          onMouseEnter={e => e.currentTarget.style.backgroundColor = '#7C3AED'}
+          onMouseLeave={e => e.currentTarget.style.backgroundColor = '#8B5CF6'}
+        >
+          Inizia la prova gratuita →
+        </Link>
+      </div>
     </div>
   );
 }
@@ -884,11 +912,11 @@ export default function DashboardPage({ user }) {
         </div>
       </a>
 
-      {/* ── Banner trial ───────────────────────────────────────────── */}
-      {subStatus === 'inactive' && <TrialBanner />}
+      {/* ── Banner upgrade piano free ─────────────────────────────── */}
+      {subStatus === 'inactive' && <FreePlanBanner />}
 
       {/* ── Toggle attiva/disattiva bot ────────────────────────────── */}
-      {subStatus !== 'inactive' && <BotToggle />}
+      <BotToggle />
 
       {/* ── Token extra ────────────────────────────────────────────── */}
       {extraTokens && (
