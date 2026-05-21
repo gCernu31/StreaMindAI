@@ -255,6 +255,9 @@ export default function ConfigPage() {
   const [spotifyAuthLoading, setSpotifyAuthLoading] = useState(false);
   const [discordShowToken, setDiscordShowToken] = useState(false);
   const [nameChangeError, setNameChangeError] = useState(null);
+  const [membersTipsCollapsed, setMembersTipsCollapsed] = useState(
+    () => localStorage.getItem('streamindai_members_tips_collapsed') === '1'
+  );
 
   // Stato modifiche non salvate
   const { setDirty } = useConfigDirty();
@@ -716,6 +719,81 @@ export default function ConfigPage() {
                 {config.members.length}/{membersLimit}
               </span>
             </div>
+            {/* Box suggerimenti collassabile */}
+            {!membersTipsCollapsed ? (
+              <div
+                className="rounded-xl px-5 py-4 mb-5"
+                style={{ backgroundColor: 'rgba(139,92,246,0.07)', border: '1px solid rgba(139,92,246,0.25)' }}
+              >
+                <div className="flex items-start justify-between gap-3 mb-3">
+                  <div className="flex items-center gap-2">
+                    <span className="text-base leading-none">💡</span>
+                    <span className="text-sm font-semibold" style={{ color: '#c4b5fd' }}>Come configurare i membri al meglio</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setMembersTipsCollapsed(true);
+                      localStorage.setItem('streamindai_members_tips_collapsed', '1');
+                    }}
+                    className="text-xs shrink-0 transition-colors"
+                    style={{ color: '#6b7280' }}
+                    onMouseEnter={e => { e.currentTarget.style.color = '#a78bfa'; }}
+                    onMouseLeave={e => { e.currentTarget.style.color = '#6b7280'; }}
+                  >
+                    Nascondi suggerimenti
+                  </button>
+                </div>
+                <p className="text-xs mb-3" style={{ color: '#a0a0a0', lineHeight: '1.6' }}>
+                  I membri che inserisci qui vengono usati dal bot per riconoscere e personalizzare le risposte agli utenti più importanti della tua community.
+                </p>
+                <ul className="text-xs space-y-2" style={{ color: '#a0a0a0', lineHeight: '1.6' }}>
+                  <li className="flex items-start gap-2">
+                    <span className="shrink-0 mt-0.5" style={{ color: '#8B5CF6' }}>•</span>
+                    <span>
+                      <strong style={{ color: '#c4b5fd' }}>Nome utente:</strong> inserisci il nome Twitch esatto (es.{' '}
+                      <code className="px-1 rounded" style={{ backgroundColor: 'rgba(139,92,246,0.15)', color: '#e9d5ff' }}>therealsamtv</code>)
+                    </span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="shrink-0 mt-0.5" style={{ color: '#8B5CF6' }}>•</span>
+                    <span>
+                      <strong style={{ color: '#c4b5fd' }}>Descrizione:</strong> aggiungi info utili come ruolo, soprannome, caratteristiche o inside joke della community. Più dettagli dai, più il bot sarà preciso. Es. <em>"Mod fidato, appassionato di FPS, lo chiamiamo Sammy"</em>
+                    </span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="shrink-0 mt-0.5" style={{ color: '#8B5CF6' }}>•</span>
+                    <span>
+                      <strong style={{ color: '#c4b5fd' }}>Priorità:</strong> inserisci prima i membri più attivi e importanti — il bot li considera in ordine
+                    </span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="shrink-0 mt-0.5" style={{ color: '#8B5CF6' }}>•</span>
+                    <span>
+                      <strong style={{ color: '#c4b5fd' }}>Aggiorna periodicamente:</strong> se un membro cambia ruolo o ha nuove caratteristiche, aggiorna la sua descrizione
+                    </span>
+                  </li>
+                </ul>
+              </div>
+            ) : (
+              <div className="mb-4 flex justify-start">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setMembersTipsCollapsed(false);
+                    localStorage.setItem('streamindai_members_tips_collapsed', '0');
+                  }}
+                  className="text-xs transition-colors flex items-center gap-1.5"
+                  style={{ color: '#6b7280' }}
+                  onMouseEnter={e => { e.currentTarget.style.color = '#a78bfa'; }}
+                  onMouseLeave={e => { e.currentTarget.style.color = '#6b7280'; }}
+                >
+                  <span>💡</span>
+                  <span>Mostra suggerimenti</span>
+                </button>
+              </div>
+            )}
+
             <p className="text-xs text-hally-text-muted mb-4">
               Aggiungi i membri fissi della tua community. StreaMindAI li riconoscerà per nome e si comporterà di conseguenza.
             </p>
