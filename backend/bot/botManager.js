@@ -213,16 +213,17 @@ async function fetchCurrentGame(streamerId, twitchId) {
 
 // ─── EventSub ─────────────────────────────────────────────────────────────────
 
+// needsUserToken: true → richiede il token OAuth dello streamer (non l'app token)
 const EVENTSUB_SUBS = [
-  { type: 'channel.follow',            ver: '2', cond: 'follow'   },
-  { type: 'channel.subscribe',         ver: '1', cond: 'standard' },
-  { type: 'channel.subscription.gift', ver: '1', cond: 'standard' },
-  { type: 'channel.cheer',             ver: '1', cond: 'standard' },
-  { type: 'channel.hype_train.begin',  ver: '1', cond: 'standard' },
-  { type: 'channel.raid',              ver: '1', cond: 'raid'     },
-  { type: 'stream.online',             ver: '1', cond: 'standard' },
-  { type: 'stream.offline',            ver: '1', cond: 'standard' },
-  { type: 'channel.update',            ver: '1', cond: 'standard' },
+  { type: 'channel.follow',            ver: '2', cond: 'follow',   needsUserToken: true  },
+  { type: 'channel.subscribe',         ver: '1', cond: 'standard', needsUserToken: true  },
+  { type: 'channel.subscription.gift', ver: '1', cond: 'standard', needsUserToken: true  },
+  { type: 'channel.cheer',             ver: '1', cond: 'standard', needsUserToken: true  },
+  { type: 'channel.hype_train.begin',  ver: '1', cond: 'standard', needsUserToken: true  },
+  { type: 'channel.raid',              ver: '1', cond: 'raid',     needsUserToken: false },
+  { type: 'stream.online',             ver: '1', cond: 'standard', needsUserToken: false },
+  { type: 'stream.offline',            ver: '1', cond: 'standard', needsUserToken: false },
+  { type: 'channel.update',            ver: '1', cond: 'standard', needsUserToken: false },
 ];
 
 const EVENTSUB_PLAN_MAP = {
@@ -234,27 +235,57 @@ const EVENTSUB_PLAN_MAP = {
   'channel.raid':              'raid',
 };
 
-async function registerEventSub(broadcasterId, streamer) {
-  const token  = await getAppToken();
-  const cid    = process.env.TWITCH_CLIENT_ID;
-  const appUrl = process.env.APP_URL;
-  if (!token || !cid || !appUrl) return;
+async function getStreamerToken(streamerId, username) {
+  try {
+    const { rows } = await pool.query(
+      `SELECT twitch_access_token FROM streamers WHERE id = $1`,
+      [streamerId]
+    );
+    if (!rows[0]?.twitch_access_token) {
+      console.warn(`[EventSub] Token streamer @${username} non ha i permessi necessari — richiesta ri-autenticazione`);
+      return null;
+    }
+    return rows[0].twitch_access_token;
+  } catch (e) {
+    console.warn(`[EventSub] Errore recupero token @${username}:`, e.message);
+    return null;
+  }
+}
 
-  const callback = `${appUrl}/webhooks/twitch-eventsub`;
-  const limits   = getLimits(streamer.subscription_plan);
-  const bid      = await getBotUserId();
+async function registerEventSub(broadcasterId, streamer) {
+  const appToken = await getAppToken();
+  const cid      = process.env.TWITCH_CLIENT_ID;
+  const appUrl   = process.env.APP_URL;
+  if (!appToken || !cid || !appUrl) return;
+
+  const callback   = `${appUrl}/webhooks/twitch-eventsub`;
+  const limits     = getLimits(streamer.subscription_plan);
+  // Fetch user token una sola volta (lazy) per i tipi che lo richiedono
+  let userToken    = undefined;
 
   for (const sub of EVENTSUB_SUBS) {
     const planEvent = EVENTSUB_PLAN_MAP[sub.type];
     if (planEvent && !limits.events.includes(planEvent)) continue;
 
+    // Seleziona il token corretto
+    let token;
+    if (sub.needsUserToken) {
+      if (userToken === undefined) {
+        userToken = await getStreamerToken(streamer.streamer_id, streamer.twitch_username);
+      }
+      if (!userToken) {
+        // Log già emesso da getStreamerToken; saltiamo i tipi che non possiamo registrare
+        continue;
+      }
+      token = userToken;
+    } else {
+      token = appToken;
+    }
+
     let condition;
     if (sub.cond === 'follow') {
-      // channel.follow v2 richiede moderator_user_id; se il bot user ID non è ancora
-      // risolto, usa broadcasterId (il broadcaster può monitorare i propri follow)
-      const modId = bid ?? broadcasterId;
-      if (!modId) continue;
-      condition = { broadcaster_user_id: broadcasterId, moderator_user_id: modId };
+      // channel.follow v2: moderator_user_id deve corrispondere all'utente del token (il broadcaster stesso)
+      condition = { broadcaster_user_id: broadcasterId, moderator_user_id: broadcasterId };
     } else if (sub.cond === 'raid') {
       condition = { to_broadcaster_user_id: broadcasterId };
     } else {

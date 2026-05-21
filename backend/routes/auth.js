@@ -20,7 +20,7 @@ authRoutes.get('/twitch', (req, res) => {
     client_id:     process.env.TWITCH_CLIENT_ID,
     redirect_uri:  process.env.TWITCH_REDIRECT_URI,
     response_type: 'code',
-    scope:         'user:read:email',
+    scope:         'user:read:email channel:read:subscriptions bits:read moderator:read:followers channel:read:hype_train',
     state,
   });
   res.redirect(`https://id.twitch.tv/oauth2/authorize?${params}`);
@@ -56,7 +56,8 @@ authRoutes.get('/twitch/callback', async (req, res) => {
       },
     });
 
-    const { access_token } = tokenRes.data;
+    const { access_token, refresh_token, expires_in } = tokenRes.data;
+    const tokenExpiresAt = Date.now() + (expires_in || 14400) * 1000;
 
     // 2. Recupera i dati utente da Twitch Helix
     const userRes = await axios.get('https://api.twitch.tv/helix/users', {
@@ -71,14 +72,18 @@ authRoutes.get('/twitch/callback', async (req, res) => {
 
     // 3. Upsert nella tabella streamers
     const upsertStreamer = `
-      INSERT INTO streamers (twitch_id, twitch_username, display_name, email, avatar_url, updated_at)
-      VALUES ($1, $2, $3, $4, $5, NOW())
+      INSERT INTO streamers (twitch_id, twitch_username, display_name, email, avatar_url,
+                             twitch_access_token, twitch_refresh_token, twitch_token_expires_at, updated_at)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW())
       ON CONFLICT (twitch_id) DO UPDATE SET
-        twitch_username = EXCLUDED.twitch_username,
-        display_name    = EXCLUDED.display_name,
-        email           = COALESCE(EXCLUDED.email, streamers.email),
-        avatar_url      = EXCLUDED.avatar_url,
-        updated_at      = NOW()
+        twitch_username       = EXCLUDED.twitch_username,
+        display_name          = EXCLUDED.display_name,
+        email                 = COALESCE(EXCLUDED.email, streamers.email),
+        avatar_url            = EXCLUDED.avatar_url,
+        twitch_access_token   = EXCLUDED.twitch_access_token,
+        twitch_refresh_token  = COALESCE(EXCLUDED.twitch_refresh_token, streamers.twitch_refresh_token),
+        twitch_token_expires_at = EXCLUDED.twitch_token_expires_at,
+        updated_at            = NOW()
       RETURNING id, subscription_status, subscription_end, referral_code,
                 (xmax::text::bigint = 0) as is_new
     `;
@@ -89,6 +94,9 @@ authRoutes.get('/twitch/callback', async (req, res) => {
       tw.display_name,
       tw.email || null,
       tw.profile_image_url || null,
+      access_token,
+      refresh_token || null,
+      tokenExpiresAt,
     ]);
 
     const streamer = rows[0];

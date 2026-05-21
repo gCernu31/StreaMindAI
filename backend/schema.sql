@@ -347,6 +347,21 @@ BEGIN
 END;
 $$;
 
+-- Token OAuth streamer (necessari per EventSub user-scoped)
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='streamers' AND column_name='twitch_access_token') THEN
+    ALTER TABLE streamers ADD COLUMN twitch_access_token TEXT;
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='streamers' AND column_name='twitch_refresh_token') THEN
+    ALTER TABLE streamers ADD COLUMN twitch_refresh_token TEXT;
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='streamers' AND column_name='twitch_token_expires_at') THEN
+    ALTER TABLE streamers ADD COLUMN twitch_token_expires_at BIGINT;
+  END IF;
+END;
+$$;
+
 -- Finestre di manutenzione programmata
 CREATE TABLE IF NOT EXISTS maintenance_windows (
   id          SERIAL PRIMARY KEY,
