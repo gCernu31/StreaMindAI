@@ -97,27 +97,151 @@ function checkEventCooldown(streamerId, type, username) {
 
 // ─── Gemini ───────────────────────────────────────────────────────────────────
 
-async function gemini(system, user, maxTokens = 1024, thinkingBudget = 512, history = []) {
+// ── AI provider helpers ───────────────────────────────────────────────────────
+
+function isTransientAiError(e) {
+  const status = e.response?.status;
+  const msg    = (e.response?.data?.error?.message ?? e.response?.data?.message ?? e.message ?? '').toLowerCase();
+  return status === 429 || status === 503 || status === 500 ||
+    e.code === 'ECONNABORTED' ||
+    msg.includes('high demand') ||
+    msg.includes('rate limit') ||
+    msg.includes('too many requests') ||
+    msg.includes('service unavailable') ||
+    msg.includes('overloaded');
+}
+
+// Converte history Gemini (role:'model') nel formato OpenAI-compatible (role:'assistant')
+function historyToOpenAI(history) {
+  return history.map(h => ({ role: h.role === 'model' ? 'assistant' : h.role, content: h.content }));
+}
+
+async function _callGemini(system, user, maxTokens, thinkingBudget, history) {
   const key = process.env.GEMINI_API_KEY;
   if (!key) return null;
+  const r = await axios.post(
+    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${key}`,
+    {
+      system_instruction: { parts: [{ text: system }] },
+      contents: [
+        ...history.map(h => ({ role: h.role, parts: [{ text: h.content }] })),
+        { role: 'user', parts: [{ text: user }] },
+      ],
+      generationConfig: { temperature: 0.85, maxOutputTokens: maxTokens, thinkingConfig: { thinkingBudget } },
+    },
+    { timeout: 20_000 }
+  );
+  return r.data?.candidates?.[0]?.content?.parts?.[0]?.text?.trim() ?? null;
+}
+
+async function _callOpenAI(system, user, maxTokens, history) {
+  const key = process.env.OPENAI_API_KEY;
+  if (!key) return null;
+  const r = await axios.post(
+    'https://api.openai.com/v1/chat/completions',
+    {
+      model: 'gpt-4o-mini',
+      messages: [
+        { role: 'system', content: system },
+        ...historyToOpenAI(history),
+        { role: 'user', content: user },
+      ],
+      max_tokens: maxTokens,
+      temperature: 0.85,
+    },
+    { headers: { Authorization: `Bearer ${key}` }, timeout: 15_000 }
+  );
+  return r.data?.choices?.[0]?.message?.content?.trim() ?? null;
+}
+
+async function _callGroq(system, user, maxTokens, history) {
+  const key = process.env.GROQ_API_KEY;
+  if (!key) return null;
+  const r = await axios.post(
+    'https://api.groq.com/openai/v1/chat/completions',
+    {
+      model: 'llama-3.3-70b-versatile',
+      messages: [
+        { role: 'system', content: system },
+        ...historyToOpenAI(history),
+        { role: 'user', content: user },
+      ],
+      max_tokens: maxTokens,
+      temperature: 0.85,
+    },
+    { headers: { Authorization: `Bearer ${key}` }, timeout: 15_000 }
+  );
+  return r.data?.choices?.[0]?.message?.content?.trim() ?? null;
+}
+
+async function _callCerebras(system, user, maxTokens, history) {
+  const key = process.env.CEREBRAS_API_KEY;
+  if (!key) return null;
+  const r = await axios.post(
+    'https://api.cerebras.ai/v1/chat/completions',
+    {
+      model: 'llama-3.3-70b',
+      messages: [
+        { role: 'system', content: system },
+        ...historyToOpenAI(history),
+        { role: 'user', content: user },
+      ],
+      max_tokens: maxTokens,
+      temperature: 0.85,
+    },
+    { headers: { Authorization: `Bearer ${key}` }, timeout: 15_000 }
+  );
+  return r.data?.choices?.[0]?.message?.content?.trim() ?? null;
+}
+
+// Catena: Gemini (+ retry 2s) → OpenAI → Groq → Cerebras
+async function gemini(system, user, maxTokens = 1024, thinkingBudget = 512, history = []) {
+  // ── 1. Gemini ─────────────────────────────────────────────────────────────
   try {
-    const r = await axios.post(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${key}`,
-      {
-        system_instruction: { parts: [{ text: system }] },
-        contents: [
-          ...history.map(h => ({ role: h.role, parts: [{ text: h.content }] })),
-          { role: 'user', parts: [{ text: user }] },
-        ],
-        generationConfig:   { temperature: 0.85, maxOutputTokens: maxTokens, thinkingConfig: { thinkingBudget } },
-      },
-      { timeout: 20_000 }
-    );
-    return r.data?.candidates?.[0]?.content?.parts?.[0]?.text?.trim() ?? null;
+    const result = await _callGemini(system, user, maxTokens, thinkingBudget, history);
+    if (result) return result;
   } catch (e) {
-    console.error('[Bot] Gemini:', e.response?.data?.error?.message ?? e.message);
-    return null;
+    const errMsg = e.response?.data?.error?.message ?? e.message;
+    if (isTransientAiError(e)) {
+      console.warn(`[Bot] Gemini sovraccarico — retry in 2s (${errMsg})`);
+      await new Promise(res => setTimeout(res, 2000));
+      try {
+        const retry = await _callGemini(system, user, maxTokens, thinkingBudget, history);
+        if (retry) return retry;
+      } catch (e2) {
+        console.warn('[Bot] Gemini retry fallito:', e2.response?.data?.error?.message ?? e2.message);
+      }
+    } else {
+      console.error('[Bot] Gemini:', errMsg);
+    }
   }
+
+  // ── 2. OpenAI ─────────────────────────────────────────────────────────────
+  try {
+    const result = await _callOpenAI(system, user, maxTokens, history);
+    if (result) { console.warn('[Bot] Fallback → OpenAI'); return result; }
+  } catch (e) {
+    console.warn('[Bot] OpenAI fallback:', e.response?.data?.error?.message ?? e.message);
+  }
+
+  // ── 3. Groq ───────────────────────────────────────────────────────────────
+  try {
+    const result = await _callGroq(system, user, maxTokens, history);
+    if (result) { console.warn('[Bot] Fallback → Groq'); return result; }
+  } catch (e) {
+    console.warn('[Bot] Groq fallback:', e.response?.data?.error?.message ?? e.message);
+  }
+
+  // ── 4. Cerebras ───────────────────────────────────────────────────────────
+  try {
+    const result = await _callCerebras(system, user, maxTokens, history);
+    if (result) { console.warn('[Bot] Fallback → Cerebras'); return result; }
+  } catch (e) {
+    console.warn('[Bot] Cerebras fallback:', e.response?.data?.error?.message ?? e.message);
+  }
+
+  console.error('[Bot] Tutti i provider AI hanno fallito');
+  return null;
 }
 
 // ─── Twitch app token (EventSub) ──────────────────────────────────────────────
