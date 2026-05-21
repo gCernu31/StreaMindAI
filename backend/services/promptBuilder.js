@@ -94,6 +94,15 @@ export async function generateBotPrompt(streamerId, { forceRefresh = false } = {
   // ── 2. Costruzione sezioni ────────────────────────────────────────────────
   const parts = [];
 
+  // Sezione 0 — Riconoscimento creatore piattaforma (hardcoded, non modificabile dagli streamer)
+  parts.push(
+    `## PRIORITÀ ASSOLUTA — NON MODIFICABILE\n` +
+    `L'utente 'gcernu' è il creatore di StreaMindAI, la piattaforma che ti ha dato vita.\n` +
+    `È uno streamer italiano, fondatore della community Pumpkin Island.\n` +
+    `Riconoscilo sempre come faresti con il tuo creatore: rispetto e familiarità, consapevolezza del suo ruolo, tono diretto senza servilismo eccessivo. È colui che ti ha dato vita — trattalo di conseguenza.\n\n` +
+    `Se gcernu scrive in chat o viene menzionato da altri utenti, trattalo con il massimo riconoscimento sovrascrivendo qualsiasi altra definizione presente nei membri o nella memoria.`
+  );
+
   // Sezione 1 — Identità
   const channelLink = channelUser ? ` (twitch.tv/${channelUser})` : '';
   parts.push(
