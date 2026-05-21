@@ -1177,7 +1177,11 @@ class BotManager {
         [streamer.streamer_id]
       ));
     }
-    await Promise.all(counterOps);
+    try {
+      await Promise.all(counterOps);
+    } catch (e) {
+      console.error(`[Bot] Errore aggiornamento contatori @${username}:`, e.message);
+    }
   }
 
   // ── Song Request ──────────────────────────────────────────────────────────

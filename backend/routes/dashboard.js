@@ -92,9 +92,9 @@ export async function statsHandler(req, res) {
          FROM streamers WHERE id = $1`,
         [sid]
       ),
-      // Utilizzo ultimi 7 giorni (per grafico)
+      // Utilizzo ultimi 7 giorni (per grafico) — cast a text garantisce formato YYYY-MM-DD
       pool.query(
-        `SELECT usage_date, SUM(count) AS n
+        `SELECT usage_date::text, SUM(count) AS n
          FROM bot_daily_usage
          WHERE streamer_id = $1 AND usage_date >= $2
          GROUP BY usage_date ORDER BY usage_date ASC`,

@@ -45,15 +45,16 @@ const MONTHLY_LIMITS = {
 const DAY_LABELS = ['Dom', 'Lun', 'Mar', 'Mer', 'Gio', 'Ven', 'Sab'];
 
 function buildChartData(apiRows) {
-  const today = new Date();
+  // Normalizza le chiavi: il bot scrive date UTC (toISOString), dobbiamo usare UTC anche qui
   const map = {};
-  apiRows.forEach(r => { map[r.date] = r.count; });
+  apiRows.forEach(r => { map[String(r.date).slice(0, 10)] = r.count; });
 
+  const now = new Date();
   return Array.from({ length: 7 }, (_, i) => {
-    const d = new Date(today);
-    d.setDate(d.getDate() - (6 - i));
+    const d = new Date(now);
+    d.setUTCDate(d.getUTCDate() - (6 - i)); // UTC ovunque → coerente con dateStr() del bot
     const iso = d.toISOString().slice(0, 10);
-    return { day: DAY_LABELS[d.getDay()], count: map[iso] ?? 0, today: i === 6 };
+    return { day: DAY_LABELS[d.getUTCDay()], count: map[iso] ?? 0, today: i === 6 };
   });
 }
 
@@ -388,10 +389,11 @@ function UsageChart({ data }) {
   const first = pts[0];
   const areaPath = `${linePath} L${last.x.toFixed(1)},${(pT + cH).toFixed(1)} L${first.x.toFixed(1)},${(pT + cH).toFixed(1)} Z`;
 
-  const yTicks = [0, 0.5, 1].map(t => ({
-    y: pT + (1 - t) * cH,
-    label: Math.round(max * t),
-  }));
+  const yTicks = (() => {
+    const seen = new Set();
+    return [0, 0.5, 1].map(t => ({ y: pT + (1 - t) * cH, label: Math.round(max * t) }))
+      .filter(({ label }) => { if (seen.has(label)) return false; seen.add(label); return true; });
+  })();
 
   const total = data.reduce((s, d) => s + d.count, 0);
 
