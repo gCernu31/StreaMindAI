@@ -17,7 +17,7 @@ export const PLAN_LIMITS = {
     monthlyMessages:           4_000,
 
     // Funzionalità
-    members:             5,
+    members:             10,
     songRequest:         false,
     memory:              false,
     discord:             false,
@@ -41,7 +41,7 @@ export const PLAN_LIMITS = {
     channelMessagesPerSession: 600,
     monthlyMessages:           12_000,
 
-    members:             -1,
+    members:             20,
     songRequest:         true,
     memory:              true,    // memoria base
     discord:             true,
@@ -63,7 +63,7 @@ export const PLAN_LIMITS = {
     channelMessagesPerSession: 1_200,
     monthlyMessages:           24_000,
 
-    members:             -1,
+    members:             30,
     songRequest:         true,
     memory:              true,    // avanzata con game_context
     discord:             true,
@@ -85,7 +85,7 @@ export const PLAN_LIMITS = {
     channelMessagesPerSession: 3_000,
     monthlyMessages:           60_000,
 
-    members:             -1,
+    members:             50,
     songRequest:         true,
     memory:              true,
     discord:             true,

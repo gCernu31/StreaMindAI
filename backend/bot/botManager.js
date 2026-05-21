@@ -63,6 +63,12 @@ const currentGames = new Map();
 // Cronologia scambi AI per canale: streamerId → [{role,content}] (max 10 = 5 scambi)
 const channelHistory = new Map();
 
+// Profili utenti appresi: `${streamerId}:${username}` → { notes, messageCount }
+const userCache = new Map();
+
+// Buffer messaggi per generazione note: `${streamerId}:${username}` → string[]
+const userMessageBuffers = new Map();
+
 // Twitch app token (per EventSub)
 let _appToken = null, _appTokenExp = 0, _botUserId = null;
 
@@ -152,6 +158,38 @@ async function getBotUserId() {
     console.error('[EventSub] bot user ID:', e.message);
     return null;
   }
+}
+
+// ─── Profili utenti appresi ────────────────────────────────────────────────────
+
+async function preloadUserCache() {
+  try {
+    const { rows } = await pool.query(
+      `SELECT streamer_id, username, notes, message_count FROM bot_users WHERE notes IS NOT NULL`
+    );
+    for (const row of rows) {
+      userCache.set(`${row.streamer_id}:${row.username}`, {
+        notes:        row.notes,
+        messageCount: row.message_count,
+      });
+    }
+    if (rows.length > 0) {
+      console.log(`[BotUsers] Cache precaricata: ${rows.length} profili utente`);
+    }
+  } catch (e) {
+    console.warn('[BotUsers] preloadUserCache:', e.message);
+  }
+}
+
+async function generateUserNotes(streamerId, username, recentMessages, existingNotes) {
+  const existingPart = existingNotes
+    ? `\nNote esistenti: "${existingNotes}"\nFai un merge aggiungendo solo informazioni nuove senza ripetere quelle già presenti.`
+    : '';
+  const system = `Sei un sistema di profilazione utenti per un bot Twitch. Analizza i messaggi e identifica informazioni rilevanti e persistenti sull'utente.`;
+  const prompt = `Basandoti su questi ultimi messaggi di ${username}:\n${recentMessages.join('\n')}\n\nEstrai solo info rilevanti e persistenti (giochi preferiti, ruolo nella community, info personali dette esplicitamente).${existingPart}\n\nRispondi SOLO con le note in formato testo breve, max 200 caratteri. Se non ci sono info rilevanti, rispondi con stringa vuota.`;
+  const raw = await gemini(system, prompt, 256, 64);
+  if (!raw || raw.trim().length < 5) return null;
+  return raw.trim().slice(0, 200);
 }
 
 // ─── Categoria attiva ─────────────────────────────────────────────────────────
@@ -569,6 +607,7 @@ async function loadActiveStreamers() {
       bc.bot_name,
       bc.creator_name,
       bc.bot_personality,
+      bc.members,
       bc.custom_commands,
       bc.user_msg_nonsub,
       bc.user_msg_subvip,
@@ -732,6 +771,9 @@ class BotManager {
     if (process.env.TWITCH_CLIENT_ID) {
       getBotUserId().catch(e => console.error('[Bot] getBotUserId:', e.message));
     }
+
+    // Precarica profili utenti appresi in cache RAM
+    preloadUserCache().catch(e => console.warn('[BotUsers] preload:', e.message));
 
     // Registra EventSub per tutti i canali attivi
     if (process.env.TWITCH_CLIENT_ID && process.env.APP_URL) {
@@ -985,6 +1027,19 @@ class BotManager {
       systemPrompt += `\n\n## SESSIONE ATTUALE\nIl canale sta trasmettendo in questo momento: ${currentGame}. Puoi fare riferimento al gioco se pertinente alle domande degli utenti.`;
     }
 
+    // ── Note utente (da cache) ───────────────────────────────────────────────
+    const cacheKey = `${streamer.streamer_id}:${username}`;
+    const cachedUser = userCache.get(cacheKey) ?? null;
+    if (cachedUser?.notes) {
+      const manualMembers = parseJson(streamer.members, []);
+      const isManualMember = manualMembers.some(
+        m => (m.twitch_username || '').toLowerCase() === username
+      );
+      if (!isManualMember) {
+        systemPrompt += `\n\nConosci già questo utente — ${username}: ${cachedUser.notes}`;
+      }
+    }
+
     const history = channelHistory.get(streamer.streamer_id) ?? [];
     const reply = truncate(await gemini(systemPrompt, userMessage, 1024, 512, history));
     if (!reply) {
@@ -1005,6 +1060,40 @@ class BotManager {
       console.error(`[Bot] say() #${channel}:`, e.message);
       return;
     }
+
+    // ── Aggiornamento profilo utente (fire-and-forget) ───────────────────────
+    pool.query(
+      `INSERT INTO bot_users (streamer_id, username, message_count, last_seen)
+       VALUES ($1, $2, 1, NOW())
+       ON CONFLICT (streamer_id, username) DO UPDATE SET
+         message_count = bot_users.message_count + 1,
+         last_seen     = NOW(),
+         updated_at    = NOW()
+       RETURNING message_count, notes`,
+      [streamer.streamer_id, username]
+    ).then(({ rows }) => {
+      const { message_count: count, notes } = rows[0];
+      userCache.set(cacheKey, { notes: notes ?? null, messageCount: count });
+      if (!userMessageBuffers.has(cacheKey)) userMessageBuffers.set(cacheKey, []);
+      const buf = userMessageBuffers.get(cacheKey);
+      buf.push(`${username}: ${question}`);
+      if (buf.length > 10) buf.shift();
+      const shouldGenerate = count === 10 || (count > 10 && (count - 10) % 20 === 0);
+      if (shouldGenerate) {
+        generateUserNotes(streamer.streamer_id, username, [...buf], notes ?? null)
+          .then(newNotes => {
+            if (!newNotes) return;
+            return pool.query(
+              `UPDATE bot_users SET notes=$1, updated_at=NOW() WHERE streamer_id=$2 AND username=$3`,
+              [newNotes, streamer.streamer_id, username]
+            ).then(() => {
+              userCache.set(cacheKey, { notes: newNotes, messageCount: count });
+              console.log(`[BotUsers] Note aggiornate per @${username} (${count} msg)`);
+            });
+          })
+          .catch(e => console.warn('[BotUsers] note gen:', e.message));
+      }
+    }).catch(e => console.warn('[BotUsers] upsert:', e.message));
 
     // ── Aggiorna contatori ───────────────────────────────────────────────────
     session.count++;

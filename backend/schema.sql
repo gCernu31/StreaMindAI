@@ -357,6 +357,25 @@ CREATE TABLE IF NOT EXISTS maintenance_windows (
   active      BOOLEAN NOT NULL DEFAULT true
 );
 
+-- ============================================================
+-- Profili utenti appresi automaticamente dal bot
+-- ============================================================
+CREATE TABLE IF NOT EXISTS bot_users (
+  id            SERIAL PRIMARY KEY,
+  streamer_id   INTEGER NOT NULL REFERENCES streamers(id) ON DELETE CASCADE,
+  username      VARCHAR(100) NOT NULL,
+  notes         TEXT,
+  message_count INTEGER NOT NULL DEFAULT 0,
+  last_seen     TIMESTAMP NOT NULL DEFAULT NOW(),
+  is_manual     BOOLEAN NOT NULL DEFAULT FALSE,
+  created_at    TIMESTAMP NOT NULL DEFAULT NOW(),
+  updated_at    TIMESTAMP NOT NULL DEFAULT NOW(),
+  UNIQUE (streamer_id, username)
+);
+
+CREATE INDEX IF NOT EXISTS idx_bot_users_streamer
+  ON bot_users (streamer_id, message_count DESC);
+
 -- Analisi autenticate: collega analytics_leads a un utente Twitch loggato
 DO $$
 BEGIN
