@@ -347,6 +347,15 @@ BEGIN
 END;
 $$;
 
+-- Flag ri-autenticazione richiesta (scope OAuth insufficienti)
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='streamers' AND column_name='needs_reauth') THEN
+    ALTER TABLE streamers ADD COLUMN needs_reauth BOOLEAN NOT NULL DEFAULT FALSE;
+  END IF;
+END;
+$$;
+
 -- Token OAuth streamer (necessari per EventSub user-scoped)
 DO $$
 BEGIN

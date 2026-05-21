@@ -83,6 +83,7 @@ authRoutes.get('/twitch/callback', async (req, res) => {
         twitch_access_token   = EXCLUDED.twitch_access_token,
         twitch_refresh_token  = COALESCE(EXCLUDED.twitch_refresh_token, streamers.twitch_refresh_token),
         twitch_token_expires_at = EXCLUDED.twitch_token_expires_at,
+        needs_reauth          = FALSE,
         updated_at            = NOW()
       RETURNING id, subscription_status, subscription_end, referral_code,
                 (xmax::text::bigint = 0) as is_new
@@ -158,6 +159,21 @@ authRoutes.get('/twitch/callback', async (req, res) => {
   } catch (err) {
     console.error('Errore OAuth Twitch:', err.message);
     res.redirect(`${process.env.FRONTEND_URL}/login?error=auth_failed`);
+  }
+});
+
+// ---------------------------------------------------------------------------
+// GET /api/auth/status — verifica se lo streamer necessita ri-autenticazione
+// ---------------------------------------------------------------------------
+authRoutes.get('/status', authenticateToken, async (req, res) => {
+  try {
+    const { rows } = await pool.query(
+      `SELECT needs_reauth FROM streamers WHERE id = $1`,
+      [req.user.streamer_id]
+    );
+    res.json({ needs_reauth: rows[0]?.needs_reauth ?? false });
+  } catch (err) {
+    res.status(500).json({ error: 'Errore nel recupero dello stato' });
   }
 });
 

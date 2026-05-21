@@ -60,6 +60,7 @@ export default function Layout({ user, onLogout, children }) {
   const [botName, setBotName] = useState('Il tuo bot');
   const [hasActivePlan, setHasActivePlan] = useState(null); // null=caricamento, true/false=caricato
   const [onboarding, setOnboarding] = useState({ completed: true, step: 0 }); // default true evita flicker
+  const [needsReauth, setNeedsReauth] = useState(false);
 
   const { botActive, setBotActive } = useBotStatus();
 
@@ -93,6 +94,10 @@ export default function Layout({ user, onLogout, children }) {
         }
       })
       .catch(() => setHasActivePlan(false));
+    fetch('/api/auth/status', { headers: { Authorization: `Bearer ${token}` } })
+      .then(r => r.ok ? r.json() : null)
+      .then(data => { if (data) setNeedsReauth(data.needs_reauth === true); })
+      .catch(() => {});
   }, [user]);
 
   return (
@@ -169,6 +174,27 @@ export default function Layout({ user, onLogout, children }) {
             </div>
           </div>
         </header>
+
+        {/* Banner ri-autenticazione Twitch */}
+        {needsReauth && (
+          <div
+            className="shrink-0 flex items-center justify-between gap-3 px-4 sm:px-6 py-2.5 text-sm"
+            style={{ backgroundColor: 'rgba(251,191,36,0.08)', borderBottom: '1px solid rgba(251,191,36,0.3)' }}
+          >
+            <span style={{ color: '#fbbf24' }}>
+              ⚠️ Aggiorna la connessione Twitch per abilitare tutte le funzioni del bot (follow, sub, gift, hype train). Richiede solo 10 secondi.
+            </span>
+            <a
+              href={`/api/auth/twitch?redirect_to=${encodeURIComponent(pathname)}`}
+              className="shrink-0 text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors"
+              style={{ backgroundColor: 'rgba(251,191,36,0.15)', color: '#fbbf24', border: '1px solid rgba(251,191,36,0.4)' }}
+              onMouseEnter={e => { e.currentTarget.style.backgroundColor = 'rgba(251,191,36,0.25)'; }}
+              onMouseLeave={e => { e.currentTarget.style.backgroundColor = 'rgba(251,191,36,0.15)'; }}
+            >
+              Riconnetti Twitch →
+            </a>
+          </div>
+        )}
 
         {/* Contenuto pagina */}
         <main className="flex-1 overflow-auto">

@@ -235,6 +235,12 @@ const EVENTSUB_PLAN_MAP = {
   'channel.raid':              'raid',
 };
 
+async function markNeedsReauth(streamerId, username) {
+  pool.query(`UPDATE streamers SET needs_reauth = TRUE WHERE id = $1`, [streamerId])
+    .then(() => console.log(`[Auth] Streamer @${username} necessita ri-autenticazione`))
+    .catch(e => console.warn('[Auth] markNeedsReauth:', e.message));
+}
+
 async function getStreamerToken(streamerId, username) {
   try {
     const { rows } = await pool.query(
@@ -242,7 +248,7 @@ async function getStreamerToken(streamerId, username) {
       [streamerId]
     );
     if (!rows[0]?.twitch_access_token) {
-      console.warn(`[EventSub] Token streamer @${username} non ha i permessi necessari — richiesta ri-autenticazione`);
+      markNeedsReauth(streamerId, username);
       return null;
     }
     return rows[0].twitch_access_token;
@@ -302,8 +308,12 @@ async function registerEventSub(broadcasterId, streamer) {
         { headers: { 'Client-ID': cid, Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' } }
       );
     } catch (e) {
-      if (e.response?.status !== 409) {
+      const status = e.response?.status;
+      if (status !== 409) {
         console.warn(`[EventSub] ${sub.type} @${streamer.twitch_username}: ${e.response?.data?.message ?? e.message}`);
+        if (sub.needsUserToken && (status === 401 || status === 403)) {
+          markNeedsReauth(streamer.streamer_id, streamer.twitch_username);
+        }
       }
     }
   }
