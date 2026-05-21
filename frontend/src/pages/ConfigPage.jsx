@@ -255,8 +255,6 @@ export default function ConfigPage() {
   const [spotifyAuthLoading, setSpotifyAuthLoading] = useState(false);
   const [discordShowToken, setDiscordShowToken] = useState(false);
   const [nameChangeError, setNameChangeError] = useState(null);
-  const [learnedUsers, setLearnedUsers]   = useState([]);
-  const [learnedBusy, setLearnedBusy]     = useState(null); // id in elaborazione
 
   // Stato modifiche non salvate
   const { setDirty } = useConfigDirty();
@@ -313,9 +311,6 @@ export default function ConfigPage() {
       .then(r => setPlan(r.data.subscription?.plan ?? 'starter'))
       .catch(() => setPlan('starter'));
 
-    axios.get('/api/users?limit=100', { headers: { Authorization: `Bearer ${token}` } })
-      .then(r => setLearnedUsers(r.data?.users ?? []))
-      .catch(() => {});
   }, []);
 
   const set       = (k, v)      => { setConfig(p => ({ ...p, [k]: v })); markDirty(); };
@@ -330,39 +325,6 @@ export default function ConfigPage() {
   const addCmd    = ()           => set('custom_commands', [...config.custom_commands, newCmd()]);
   const removeCmd = id           => set('custom_commands', config.custom_commands.filter(c => c.id !== id));
   const updateCmd = (id, f, v)   => set('custom_commands', config.custom_commands.map(c => c.id === id ? { ...c, [f]: v } : c));
-
-  // Utenti appresi — elimina
-  const deleteLearnedUser = async (id) => {
-    setLearnedBusy(id);
-    try {
-      const token = getToken();
-      await axios.delete(`/api/users/${id}`, { headers: { Authorization: `Bearer ${token}` } });
-      setLearnedUsers(prev => prev.filter(u => u.id !== id));
-    } catch { /* silent */ } finally {
-      setLearnedBusy(null);
-    }
-  };
-
-  // Utenti appresi — promuovi a membro manuale
-  const promoteLearnedUser = async (id) => {
-    setLearnedBusy(id);
-    try {
-      const token = getToken();
-      await axios.post(`/api/users/${id}/promote`, {}, { headers: { Authorization: `Bearer ${token}` } });
-      // Ricarica config per aggiornare la lista membri
-      const r = await axios.get('/api/config', { headers: { Authorization: `Bearer ${token}` } });
-      const d = r.data ?? {};
-      setConfig(prev => ({
-        ...prev,
-        members: (d.members ?? []).map(m => ({ ...m, id: _mid++ })),
-      }));
-      setLearnedUsers(prev => prev.filter(u => u.id !== id));
-    } catch (err) {
-      alert(err?.response?.data?.error ?? 'Errore nella promozione.');
-    } finally {
-      setLearnedBusy(null);
-    }
-  };
 
   // Controllo inline per-campo
   const checkBan = (key, val) => {
@@ -834,88 +796,6 @@ export default function ConfigPage() {
           </div>
           );
         })()}
-
-        {/* ── UTENTI APPRESI ── */}
-        {learnedUsers.length > 0 && (
-          <div className="card">
-            <div className="flex items-center justify-between pb-3 mb-5 border-b border-hally-border">
-              <h2 className="font-semibold text-base">Utenti appresi automaticamente</h2>
-              <span className="text-xs font-medium tabular-nums" style={{ color: '#6b7280' }}>
-                {learnedUsers.length}
-              </span>
-            </div>
-            <p className="text-xs text-hally-text-muted mb-4">
-              Utenti che hanno interagito col bot. Le note vengono generate automaticamente dopo 10 messaggi e aggiornate ogni 20. Puoi promuoverli a membri manuali per personalizzare il comportamento del bot.
-            </p>
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="text-left" style={{ borderBottom: '1px solid #262626' }}>
-                    <th className="pb-2 pr-4 text-xs font-medium text-hally-text-muted">Username</th>
-                    <th className="pb-2 pr-4 text-xs font-medium text-hally-text-muted">Msg</th>
-                    <th className="pb-2 pr-4 text-xs font-medium text-hally-text-muted hidden sm:table-cell">Ultimo accesso</th>
-                    <th className="pb-2 pr-4 text-xs font-medium text-hally-text-muted hidden md:table-cell">Note</th>
-                    <th className="pb-2 text-xs font-medium text-hally-text-muted text-right">Azioni</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-hally-border">
-                  {learnedUsers.map(u => {
-                    const busy = learnedBusy === u.id;
-                    const lastSeen = new Date(u.last_seen);
-                    const daysAgo  = Math.floor((Date.now() - lastSeen) / 86_400_000);
-                    const lastSeenStr = daysAgo === 0 ? 'Oggi'
-                      : daysAgo === 1 ? 'Ieri'
-                      : `${daysAgo}g fa`;
-                    return (
-                      <tr key={u.id} style={{ opacity: busy ? 0.5 : 1, transition: 'opacity 0.2s' }}>
-                        <td className="py-2.5 pr-4 font-medium text-hally-text">
-                          @{u.username}
-                        </td>
-                        <td className="py-2.5 pr-4 text-hally-text-muted tabular-nums">
-                          {u.message_count}
-                        </td>
-                        <td className="py-2.5 pr-4 text-hally-text-muted hidden sm:table-cell">
-                          {lastSeenStr}
-                        </td>
-                        <td className="py-2.5 pr-4 hidden md:table-cell" style={{ maxWidth: '240px' }}>
-                          {u.notes
-                            ? <span className="text-hally-text text-xs">{u.notes}</span>
-                            : <span className="text-hally-text-muted text-xs italic">Ancora poche interazioni</span>
-                          }
-                        </td>
-                        <td className="py-2.5 text-right">
-                          <div className="flex items-center justify-end gap-2">
-                            <button
-                              type="button"
-                              disabled={busy}
-                              onClick={() => promoteLearnedUser(u.id)}
-                              className="text-xs font-semibold px-2.5 py-1 rounded-lg border transition-all duration-150 disabled:cursor-not-allowed"
-                              style={{ borderColor: 'rgba(139,92,246,0.35)', color: '#8B5CF6', backgroundColor: 'transparent' }}
-                              onMouseEnter={e => { if (!busy) e.currentTarget.style.backgroundColor = 'rgba(139,92,246,0.1)'; }}
-                              onMouseLeave={e => { e.currentTarget.style.backgroundColor = 'transparent'; }}
-                              title="Aggiungi ai membri manuali"
-                            >
-                              Promuovi
-                            </button>
-                            <button
-                              type="button"
-                              disabled={busy}
-                              onClick={() => deleteLearnedUser(u.id)}
-                              className="text-hally-text-muted hover:text-red-400 transition-colors disabled:cursor-not-allowed"
-                              title="Elimina profilo appreso"
-                            >
-                              <IconTrash />
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        )}
 
         {/* ── MESSAGGI EVENTI ── */}
         <div className="card">

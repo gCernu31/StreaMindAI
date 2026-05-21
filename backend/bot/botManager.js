@@ -536,6 +536,37 @@ async function runMonthlyMemoryCleanup() {
   }
 }
 
+async function cleanupInactiveUsers() {
+  try {
+    const { rows } = await pool.query(
+      `DELETE FROM bot_users
+       WHERE last_seen < NOW() - INTERVAL '90 days'
+         AND is_manual = FALSE
+       RETURNING streamer_id`
+    );
+    if (rows.length > 0) {
+      const channels = new Set(rows.map(r => r.streamer_id)).size;
+      console.log(`[Cleanup] Eliminati ${rows.length} utenti inattivi da ${channels} canali`);
+    }
+  } catch (e) {
+    console.error('[Cleanup] cleanupInactiveUsers:', e.message);
+  }
+}
+
+function scheduleInactiveUsersCleanup() {
+  const msUntilNext3am = () => {
+    const now    = new Date();
+    const next3am = new Date(now);
+    next3am.setHours(3, 0, 0, 0);
+    if (next3am <= now) next3am.setDate(next3am.getDate() + 1);
+    return next3am - now;
+  };
+  setTimeout(() => {
+    cleanupInactiveUsers().catch(() => {});
+    setInterval(() => cleanupInactiveUsers().catch(() => {}), 24 * 60 * 60_000);
+  }, msUntilNext3am());
+}
+
 function scheduleMonthlyCleanup() {
   const runIfFirstOfMonth = () => {
     if (new Date().getDate() === 1) {
@@ -800,6 +831,7 @@ class BotManager {
     setInterval(() => this._syncChannels(), 5 * 60_000);
     this._startMonitor();
     scheduleMonthlyCleanup();
+    scheduleInactiveUsersCleanup();
   }
 
   _scheduleRestart(delayMs = 30_000) {
