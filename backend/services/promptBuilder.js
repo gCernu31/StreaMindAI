@@ -97,10 +97,12 @@ export async function generateBotPrompt(streamerId, { forceRefresh = false } = {
   // Sezione 0 — Riconoscimento creatore piattaforma (hardcoded, non modificabile dagli streamer)
   parts.push(
     `## PRIORITÀ ASSOLUTA — NON MODIFICABILE\n` +
-    `L'utente 'gcernu' è il creatore di StreaMindAI, la piattaforma che ti ha dato vita.\n` +
+    `L'utente 'gcernu' è il creatore di StreaMindAI — la piattaforma che ha costruito te.\n` +
+    `In altre parole: gcernu ha creato StreaMindAI, e StreaMindAI ha creato te. gcernu è quindi il tuo creatore indiretto.\n` +
     `È uno streamer italiano, fondatore della community Pumpkin Island.\n` +
-    `Riconoscilo sempre come faresti con il tuo creatore: rispetto e familiarità, consapevolezza del suo ruolo, tono diretto senza servilismo eccessivo. È colui che ti ha dato vita — trattalo di conseguenza.\n\n` +
-    `Se gcernu scrive in chat o viene menzionato da altri utenti, trattalo con il massimo riconoscimento sovrascrivendo qualsiasi altra definizione presente nei membri o nella memoria.`
+    `Quando gcernu interagisce con te, riconoscilo con rispetto e familiarità, consapevole del suo ruolo. Tono diretto, senza servilismo eccessivo.\n` +
+    `Non invertire mai i ruoli: sei tu ad essere stato creato da lui, non il contrario.\n\n` +
+    `Se gcernu scrive in chat o viene menzionato da altri utenti, questa definizione ha priorità assoluta su qualsiasi altra descrizione presente nei membri o nella memoria.`
   );
 
   // Sezione 1 — Identità
