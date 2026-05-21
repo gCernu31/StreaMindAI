@@ -294,7 +294,7 @@ export default function ConfigPage() {
           ...d,
           stream_schedule:       d.stream_schedule       ?? EMPTY.stream_schedule,
           social_links:          d.social_links          ?? EMPTY.social_links,
-          members:               d.members               ?? [],
+          members:               (d.members ?? []).map(m => ({ ...m, id: _mid++ })),
           custom_commands:       d.custom_commands       ?? [],
           event_messages:        d.event_messages        ?? { ...EMPTY_EVENT_MESSAGES },
           spotify_client_id:     d.spotify_client_id     ?? '',
@@ -700,76 +700,101 @@ export default function ConfigPage() {
         </div>
 
         {/* ── MEMBRI ── */}
-        <div className="card">
-          <SectionTitle>Membri</SectionTitle>
-          <p className="text-xs text-hally-text-muted mb-4">
-            Aggiungi i membri fissi della tua community. StreaMindAI li riconoscerà per nome e si comporterà di conseguenza.
-          </p>
-
-          <div className="space-y-3 mb-4">
-            {config.members.length === 0 && (
-              <p className="text-sm text-hally-text-muted py-6 text-center border border-dashed border-hally-border rounded-lg">
-                Nessun membro aggiunto ancora.
-              </p>
-            )}
-            {config.members.map(member => (
-              <div
-                key={member.id}
-                className="grid grid-cols-1 sm:grid-cols-3 gap-3 p-4 rounded-lg border border-hally-border bg-hally-bg"
+        {(() => {
+          const MEMBERS_CAP = { starter: 5, creator: 20, elite: 20, signature: 20 };
+          const membersLimit = MEMBERS_CAP[plan] ?? 20;
+          const atLimit = config.members.length >= membersLimit;
+          return (
+          <div className="card">
+            <div className="flex items-center justify-between pb-3 mb-5 border-b border-hally-border">
+              <h2 className="font-semibold text-base">Membri</h2>
+              <span
+                className="text-xs font-medium tabular-nums"
+                style={{ color: atLimit ? '#f87171' : '#6b7280' }}
               >
-                <div>
-                  <label className="text-xs text-hally-text-muted block mb-1">Username Twitch</label>
-                  <input
-                    className="input text-sm"
-                    value={member.twitch_username}
-                    onChange={e => updateMember(member.id, 'twitch_username', e.target.value)}
-                    placeholder="Es. xX_modacoda_Xx"
-                  />
-                </div>
-                <div>
-                  <label className="text-xs text-hally-text-muted block mb-1">Soprannome</label>
-                  <input
-                    className="input text-sm"
-                    value={member.nickname}
-                    onChange={e => { updateMember(member.id, 'nickname', e.target.value); checkBan(`m_${member.id}_nick`, e.target.value); }}
-                    placeholder="Es. Il Moderatore"
-                    style={banErrors[`m_${member.id}_nick`] ? { borderColor: '#f87171' } : undefined}
-                  />
-                  <InlineBanError msg={banErrors[`m_${member.id}_nick`]} />
-                </div>
-                <div className="relative">
-                  <label className="text-xs text-hally-text-muted block mb-1">Descrizione comportamento</label>
-                  <input
-                    className="input text-sm pr-8"
-                    value={member.description}
-                    onChange={e => { updateMember(member.id, 'description', e.target.value); checkBan(`m_${member.id}_desc`, e.target.value); }}
-                    placeholder="Es. Moderatore storico, sempre ironico"
-                    style={banErrors[`m_${member.id}_desc`] ? { borderColor: '#f87171' } : undefined}
-                  />
-                  <InlineBanError msg={banErrors[`m_${member.id}_desc`]} />
-                  <button
-                    type="button"
-                    onClick={() => removeMember(member.id)}
-                    className="absolute right-2.5 top-[26px] text-hally-text-muted hover:text-red-400 transition-colors"
-                    title="Rimuovi membro"
-                  >
-                    <IconTrash />
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
+                {config.members.length}/{membersLimit}
+              </span>
+            </div>
+            <p className="text-xs text-hally-text-muted mb-4">
+              Aggiungi i membri fissi della tua community. StreaMindAI li riconoscerà per nome e si comporterà di conseguenza.
+            </p>
 
-          <button
-            type="button"
-            onClick={addMember}
-            className="flex items-center gap-2 text-sm font-medium transition-colors duration-150 hover:opacity-80"
-            style={{ color: '#8B5CF6' }}
-          >
-            <IconPlus />
-            Aggiungi membro
-          </button>
-        </div>
+            <div className="space-y-3 mb-4">
+              {config.members.length === 0 && (
+                <p className="text-sm text-hally-text-muted py-6 text-center border border-dashed border-hally-border rounded-lg">
+                  Nessun membro aggiunto ancora.
+                </p>
+              )}
+              {config.members.map(member => (
+                <div
+                  key={member.id}
+                  className="grid grid-cols-1 sm:grid-cols-3 gap-3 p-4 rounded-lg border border-hally-border bg-hally-bg"
+                >
+                  <div>
+                    <label className="text-xs text-hally-text-muted block mb-1">Username Twitch</label>
+                    <input
+                      className="input text-sm"
+                      value={member.twitch_username}
+                      onChange={e => updateMember(member.id, 'twitch_username', e.target.value)}
+                      placeholder="Es. xX_modacoda_Xx"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs text-hally-text-muted block mb-1">Soprannome</label>
+                    <input
+                      className="input text-sm"
+                      value={member.nickname}
+                      onChange={e => { updateMember(member.id, 'nickname', e.target.value); checkBan(`m_${member.id}_nick`, e.target.value); }}
+                      placeholder="Es. Il Moderatore"
+                      style={banErrors[`m_${member.id}_nick`] ? { borderColor: '#f87171' } : undefined}
+                    />
+                    <InlineBanError msg={banErrors[`m_${member.id}_nick`]} />
+                  </div>
+                  <div className="relative">
+                    <label className="text-xs text-hally-text-muted block mb-1">Descrizione comportamento</label>
+                    <input
+                      className="input text-sm pr-8"
+                      value={member.description}
+                      onChange={e => { updateMember(member.id, 'description', e.target.value); checkBan(`m_${member.id}_desc`, e.target.value); }}
+                      placeholder="Es. Moderatore storico, sempre ironico"
+                      style={banErrors[`m_${member.id}_desc`] ? { borderColor: '#f87171' } : undefined}
+                    />
+                    <InlineBanError msg={banErrors[`m_${member.id}_desc`]} />
+                    <button
+                      type="button"
+                      onClick={() => removeMember(member.id)}
+                      className="absolute right-2.5 top-[26px] text-hally-text-muted hover:text-red-400 transition-colors"
+                      title="Rimuovi membro"
+                    >
+                      <IconTrash />
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div>
+              <button
+                type="button"
+                onClick={addMember}
+                disabled={atLimit}
+                className="flex items-center gap-2 text-sm font-medium transition-colors duration-150 disabled:cursor-not-allowed"
+                style={{ color: atLimit ? '#4b4b4b' : '#8B5CF6', opacity: atLimit ? 1 : undefined }}
+                onMouseEnter={e => { if (!atLimit) e.currentTarget.style.opacity = '0.7'; }}
+                onMouseLeave={e => { e.currentTarget.style.opacity = '1'; }}
+              >
+                <IconPlus />
+                Aggiungi membro
+              </button>
+              {atLimit && (
+                <p className="text-xs mt-1.5" style={{ color: '#f87171' }}>
+                  Hai raggiunto il limite massimo di {membersLimit} membri.
+                </p>
+              )}
+            </div>
+          </div>
+          );
+        })()}
 
         {/* ── MESSAGGI EVENTI ── */}
         <div className="card">

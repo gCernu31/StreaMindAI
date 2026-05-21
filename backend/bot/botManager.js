@@ -60,6 +60,9 @@ const eventCooldowns = new Map();
 // Categoria/gioco attivo per canale: streamerId → string|null
 const currentGames = new Map();
 
+// Cronologia scambi AI per canale: streamerId → [{role,content}] (max 10 = 5 scambi)
+const channelHistory = new Map();
+
 // Twitch app token (per EventSub)
 let _appToken = null, _appTokenExp = 0, _botUserId = null;
 
@@ -88,7 +91,7 @@ function checkEventCooldown(streamerId, type, username) {
 
 // ─── Gemini ───────────────────────────────────────────────────────────────────
 
-async function gemini(system, user, maxTokens = 1024, thinkingBudget = 512) {
+async function gemini(system, user, maxTokens = 1024, thinkingBudget = 512, history = []) {
   const key = process.env.GEMINI_API_KEY;
   if (!key) return null;
   try {
@@ -96,7 +99,10 @@ async function gemini(system, user, maxTokens = 1024, thinkingBudget = 512) {
       `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${key}`,
       {
         system_instruction: { parts: [{ text: system }] },
-        contents:           [{ role: 'user', parts: [{ text: user }] }],
+        contents: [
+          ...history.map(h => ({ role: h.role, parts: [{ text: h.content }] })),
+          { role: 'user', parts: [{ text: user }] },
+        ],
         generationConfig:   { temperature: 0.85, maxOutputTokens: maxTokens, thinkingConfig: { thinkingBudget } },
       },
       { timeout: 20_000 }
@@ -968,7 +974,8 @@ class BotManager {
     }
 
     // ── Genera risposta AI ───────────────────────────────────────────────────
-    const question = msg.slice(botCmd.length).trim() || 'Ciao!';
+    const question    = msg.slice(botCmd.length).trim() || 'Ciao!';
+    const userMessage = `[${username}]: ${question}`;
     let systemPrompt;
     try { systemPrompt = await generateBotPrompt(streamer.streamer_id); }
     catch (e) { console.error('[Bot] prompt:', e.message); return; }
@@ -978,12 +985,22 @@ class BotManager {
       systemPrompt += `\n\n## SESSIONE ATTUALE\nIl canale sta trasmettendo in questo momento: ${currentGame}. Puoi fare riferimento al gioco se pertinente alle domande degli utenti.`;
     }
 
-    const reply = truncate(await gemini(systemPrompt, question));
-    if (!reply) return;
+    const history = channelHistory.get(streamer.streamer_id) ?? [];
+    const reply = truncate(await gemini(systemPrompt, userMessage, 1024, 512, history));
+    if (!reply) {
+      console.warn(`[Bot] Nessuna risposta AI per @${username} in #${channel}`);
+      try { await this.client.say(channel, `@${username} Ops, ho avuto un problema tecnico! Riprova tra poco. 🔧`); } catch {}
+      return;
+    }
 
     try {
       await this.client.say(channel, reply);
       console.log(`[Bot] #${channel} @${username}: "${question.slice(0, 40)}" → "${reply.slice(0, 60)}…"`);
+      const hist = channelHistory.get(streamer.streamer_id) ?? [];
+      hist.push({ role: 'user',  content: userMessage });
+      hist.push({ role: 'model', content: reply });
+      if (hist.length > 10) hist.splice(0, 2);
+      channelHistory.set(streamer.streamer_id, hist);
     } catch (e) {
       console.error(`[Bot] say() #${channel}:`, e.message);
       return;
@@ -1238,6 +1255,7 @@ class BotManager {
       const q = songQueues.get(streamer.streamer_id);
       if (q) { q.songs = []; q.srCounts = new Map(); }
       currentGames.set(streamer.streamer_id, null);
+      channelHistory.delete(streamer.streamer_id);
       console.log(`[Bot] Stream offline: #${streamer.twitch_username} — contatori sessione azzerati`);
       return;
     }
