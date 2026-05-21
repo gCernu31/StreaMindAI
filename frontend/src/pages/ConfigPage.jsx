@@ -752,13 +752,13 @@ export default function ConfigPage() {
                     <span className="shrink-0 mt-0.5" style={{ color: '#8B5CF6' }}>•</span>
                     <span>
                       <strong style={{ color: '#c4b5fd' }}>Nome utente:</strong> inserisci il nome Twitch esatto (es.{' '}
-                      <code className="px-1 rounded" style={{ backgroundColor: 'rgba(139,92,246,0.15)', color: '#e9d5ff' }}>therealsamtv</code>)
+                      <code className="px-1 rounded" style={{ backgroundColor: 'rgba(139,92,246,0.15)', color: '#e9d5ff' }}>gcernu</code>)
                     </span>
                   </li>
                   <li className="flex items-start gap-2">
                     <span className="shrink-0 mt-0.5" style={{ color: '#8B5CF6' }}>•</span>
                     <span>
-                      <strong style={{ color: '#c4b5fd' }}>Descrizione:</strong> aggiungi info utili come ruolo, soprannome, caratteristiche o inside joke della community. Più dettagli dai, più il bot sarà preciso. Es. <em>"Mod fidato, appassionato di FPS, lo chiamiamo Sammy"</em>
+                      <strong style={{ color: '#c4b5fd' }}>Descrizione:</strong> aggiungi info utili come ruolo, soprannome, caratteristiche o inside joke della community. Più dettagli dai, più il bot sarà preciso. Es. <em>"Streamer principale, fondatore della community, appassionato di R6S e Rocket League"</em>
                     </span>
                   </li>
                   <li className="flex items-start gap-2">
