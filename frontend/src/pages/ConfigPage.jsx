@@ -916,6 +916,11 @@ export default function ConfigPage() {
               </div>
             ))}
           </div>
+
+          <p className="text-[11px] text-hally-text-muted mt-4 flex items-center gap-1.5">
+            <span>ℹ️</span>
+            Se gli eventi non arrivano in chat, prova a riconnetterti a Twitch dalla sidebar.
+          </p>
         </div>
 
         {/* ── COMANDI ── */}

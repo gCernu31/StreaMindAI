@@ -1,5 +1,34 @@
-import { NavLink } from 'react-router-dom';
+import { NavLink, useLocation } from 'react-router-dom';
+import { useState, useEffect } from 'react';
 import { useConfigDirty } from '../contexts/ConfigDirtyCtx.jsx';
+
+const REAUTH_LS_KEY   = 'sma_reauth_cooldown_ts';
+const REAUTH_COOLDOWN = 60; // secondi
+
+function useTwitchReauthCooldown() {
+  const [remaining, setRemaining] = useState(() => {
+    const ts = parseInt(localStorage.getItem(REAUTH_LS_KEY) ?? '0');
+    return Math.max(0, REAUTH_COOLDOWN - Math.floor((Date.now() - ts) / 1000));
+  });
+
+  useEffect(() => {
+    if (remaining <= 0) return;
+    const id = setInterval(() => {
+      const ts = parseInt(localStorage.getItem(REAUTH_LS_KEY) ?? '0');
+      const left = Math.max(0, REAUTH_COOLDOWN - Math.floor((Date.now() - ts) / 1000));
+      setRemaining(left);
+      if (left <= 0) clearInterval(id);
+    }, 1000);
+    return () => clearInterval(id);
+  }, [remaining]);
+
+  const startCooldown = () => {
+    localStorage.setItem(REAUTH_LS_KEY, String(Date.now()));
+    setRemaining(REAUTH_COOLDOWN);
+  };
+
+  return { remaining, startCooldown };
+}
 
 // ---------------------------------------------------------------------------
 // Icone SVG inline
@@ -96,6 +125,9 @@ const navItems = [
 
 export default function Sidebar({ user, onLogout, open, onClose, hasActivePlan }) {
   const { dirty } = useConfigDirty();
+  const { pathname } = useLocation();
+  const { remaining, startCooldown } = useTwitchReauthCooldown();
+  const reauthHref = `/api/auth/twitch?redirect_to=${encodeURIComponent(pathname)}`;
   return (
     <>
       {/* Overlay mobile (scuro dietro il drawer) */}
@@ -276,6 +308,32 @@ export default function Sidebar({ user, onLogout, open, onClose, hasActivePlan }
             Torna al sito
           </a>
         </nav>
+
+        {/* Riconnetti Twitch */}
+        {user && (
+          <div className="px-3 pb-2 border-t border-hally-border pt-3">
+            {remaining > 0 ? (
+              <button
+                disabled
+                className="w-full flex items-center justify-center gap-2 text-xs font-medium px-3 py-2 rounded-lg"
+                style={{ backgroundColor: 'rgba(107,114,128,0.08)', border: '1px solid rgba(107,114,128,0.2)', color: '#6b7280', cursor: 'not-allowed' }}
+              >
+                🔄 Riconnessione in corso… ({remaining}s)
+              </button>
+            ) : (
+              <a
+                href={reauthHref}
+                onClick={startCooldown}
+                className="w-full flex items-center justify-center gap-2 text-xs font-medium px-3 py-2 rounded-lg transition-colors"
+                style={{ backgroundColor: 'rgba(139,92,246,0.06)', border: '1px solid rgba(139,92,246,0.2)', color: '#a78bfa' }}
+                onMouseEnter={e => e.currentTarget.style.backgroundColor = 'rgba(139,92,246,0.12)'}
+                onMouseLeave={e => e.currentTarget.style.backgroundColor = 'rgba(139,92,246,0.06)'}
+              >
+                🔄 Riconnetti Twitch
+              </a>
+            )}
+          </div>
+        )}
 
         {/* User info + logout */}
         <div className="px-3 py-3 border-t border-hally-border">

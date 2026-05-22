@@ -1,5 +1,30 @@
 import { Link, useLocation } from 'react-router-dom';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
+
+const REAUTH_LS_KEY   = 'sma_reauth_cooldown_ts';
+const REAUTH_COOLDOWN = 60;
+
+function useReauthCooldown() {
+  const [remaining, setRemaining] = useState(() => {
+    const ts = parseInt(localStorage.getItem(REAUTH_LS_KEY) ?? '0');
+    return Math.max(0, REAUTH_COOLDOWN - Math.floor((Date.now() - ts) / 1000));
+  });
+  useEffect(() => {
+    if (remaining <= 0) return;
+    const id = setInterval(() => {
+      const ts = parseInt(localStorage.getItem(REAUTH_LS_KEY) ?? '0');
+      const left = Math.max(0, REAUTH_COOLDOWN - Math.floor((Date.now() - ts) / 1000));
+      setRemaining(left);
+      if (left <= 0) clearInterval(id);
+    }, 1000);
+    return () => clearInterval(id);
+  }, [remaining]);
+  const startCooldown = useCallback(() => {
+    localStorage.setItem(REAUTH_LS_KEY, String(Date.now()));
+    setRemaining(REAUTH_COOLDOWN);
+  }, []);
+  return { remaining, startCooldown };
+}
 import Sidebar from './Sidebar.jsx';
 import OnboardingWizard from './OnboardingWizard.jsx';
 import { getToken } from '../utils/auth.js';
@@ -61,6 +86,7 @@ export default function Layout({ user, onLogout, children }) {
   const [hasActivePlan, setHasActivePlan] = useState(null); // null=caricamento, true/false=caricato
   const [onboarding, setOnboarding] = useState({ completed: true, step: 0 }); // default true evita flicker
   const [needsReauth, setNeedsReauth] = useState(false);
+  const { remaining: reauthRemaining, startCooldown: startReauthCooldown } = useReauthCooldown();
 
   const { botActive, setBotActive } = useBotStatus();
 
@@ -184,15 +210,26 @@ export default function Layout({ user, onLogout, children }) {
             <span style={{ color: '#fbbf24' }}>
               ⚠️ Aggiorna la connessione Twitch per abilitare tutte le funzioni del bot (follow, sub, gift, hype train). Richiede solo 10 secondi.
             </span>
-            <a
-              href={`/api/auth/twitch?redirect_to=${encodeURIComponent(pathname)}`}
-              className="shrink-0 text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors"
-              style={{ backgroundColor: 'rgba(251,191,36,0.15)', color: '#fbbf24', border: '1px solid rgba(251,191,36,0.4)' }}
-              onMouseEnter={e => { e.currentTarget.style.backgroundColor = 'rgba(251,191,36,0.25)'; }}
-              onMouseLeave={e => { e.currentTarget.style.backgroundColor = 'rgba(251,191,36,0.15)'; }}
-            >
-              Riconnetti Twitch →
-            </a>
+            {reauthRemaining > 0 ? (
+              <button
+                disabled
+                className="shrink-0 text-xs font-semibold px-3 py-1.5 rounded-lg"
+                style={{ backgroundColor: 'rgba(107,114,128,0.12)', color: '#6b7280', border: '1px solid rgba(107,114,128,0.2)', cursor: 'not-allowed' }}
+              >
+                Riconnessione in corso… ({reauthRemaining}s)
+              </button>
+            ) : (
+              <a
+                href={`/api/auth/twitch?redirect_to=${encodeURIComponent(pathname)}`}
+                onClick={startReauthCooldown}
+                className="shrink-0 text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors"
+                style={{ backgroundColor: 'rgba(251,191,36,0.15)', color: '#fbbf24', border: '1px solid rgba(251,191,36,0.4)' }}
+                onMouseEnter={e => { e.currentTarget.style.backgroundColor = 'rgba(251,191,36,0.25)'; }}
+                onMouseLeave={e => { e.currentTarget.style.backgroundColor = 'rgba(251,191,36,0.15)'; }}
+              >
+                Riconnetti Twitch →
+              </a>
+            )}
           </div>
         )}
 
