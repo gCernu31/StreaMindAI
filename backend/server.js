@@ -56,6 +56,7 @@ app.post('/webhooks/twitch-eventsub', express.raw({ type: 'application/json' }),
   const subType     = req.headers['twitch-eventsub-subscription-type'] ?? '';
   const signature   = req.headers['twitch-eventsub-message-signature'] ?? '';
   const rawBody     = req.body.toString('utf8');
+  console.log('[EventSub] Webhook ricevuto:', messageType, subType);
 
   if (!verifyEventSubSignature(messageId, timestamp, rawBody, signature)) {
     return res.status(403).send('Firma non valida');

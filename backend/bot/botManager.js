@@ -37,6 +37,7 @@ import {
 
 // ─── Costanti ─────────────────────────────────────────────────────────────────
 const EVENTSUB_SECRET   = process.env.EVENTSUB_SECRET || 'streamindai-eventsub-secret';
+if (!process.env.EVENTSUB_SECRET) console.warn('[Bot] ATTENZIONE: EVENTSUB_SECRET non impostato — uso valore di fallback, i webhook EventSub potrebbero fallire in produzione');
 const MEMORY_BATCH_SIZE = 20;
 const EVENT_COOLDOWN_MS = 30_000;
 
@@ -138,9 +139,12 @@ async function _callGemini(system, user, maxTokens, thinkingBudget, history) {
       ],
       generationConfig: { temperature: 0.85, maxOutputTokens: maxTokens, thinkingConfig: { thinkingBudget } },
     },
-    { timeout: 20_000 }
+    { timeout: 12_000 }
   );
-  return r.data?.candidates?.[0]?.content?.parts?.[0]?.text?.trim() ?? null;
+  // Con thinking abilitato, parts[0] è il ragionamento interno e parts[1] la risposta.
+  // Usiamo find(p => !p.thought) per prendere sempre la risposta effettiva.
+  const parts = r.data?.candidates?.[0]?.content?.parts ?? [];
+  return parts.find(p => !p.thought)?.text?.trim() ?? null;
 }
 
 async function _callOpenAI(system, user, maxTokens, history) {
@@ -203,54 +207,68 @@ async function _callCerebras(system, user, maxTokens, history) {
   return r.data?.choices?.[0]?.message?.content?.trim() ?? null;
 }
 
-// Catena: Gemini (+ retry 2s) → OpenAI → Groq → Cerebras
+// Catena: Gemini (+ retry 1s) → OpenAI → Groq → Cerebras, timeout globale 20s
 async function gemini(system, user, maxTokens = 1024, thinkingBudget = 512, history = []) {
-  // ── 1. Gemini ─────────────────────────────────────────────────────────────
-  try {
-    const result = await _callGemini(system, user, maxTokens, thinkingBudget, history);
-    if (result) return result;
-  } catch (e) {
-    const errMsg = e.response?.data?.error?.message ?? e.message;
-    if (isTransientAiError(e)) {
-      console.warn(`[Bot] Gemini sovraccarico — retry in 2s (${errMsg})`);
-      await new Promise(res => setTimeout(res, 2000));
-      try {
-        const retry = await _callGemini(system, user, maxTokens, thinkingBudget, history);
-        if (retry) return retry;
-      } catch (e2) {
-        console.warn('[Bot] Gemini retry fallito:', e2.response?.data?.error?.message ?? e2.message);
+  const _chain = async () => {
+    // ── 1. Gemini ───────────────────────────────────────────────────────────
+    try {
+      const result = await _callGemini(system, user, maxTokens, thinkingBudget, history);
+      if (result) return result;
+      console.warn('[Bot] Gemini returned null (filtered/empty) — trying fallback');
+    } catch (e) {
+      const errMsg = e.response?.data?.error?.message ?? e.message;
+      if (isTransientAiError(e)) {
+        console.warn(`[Bot] Gemini sovraccarico — retry in 1s (${errMsg})`);
+        await new Promise(res => setTimeout(res, 1000));
+        try {
+          const retry = await _callGemini(system, user, maxTokens, thinkingBudget, history);
+          if (retry) return retry;
+          console.warn('[Bot] Gemini retry returned null — trying fallback');
+        } catch (e2) {
+          console.warn('[Bot] Gemini retry fallito:', e2.response?.data?.error?.message ?? e2.message);
+        }
+      } else {
+        console.error('[Bot] Gemini:', errMsg);
       }
-    } else {
-      console.error('[Bot] Gemini:', errMsg);
     }
-  }
 
-  // ── 2. OpenAI ─────────────────────────────────────────────────────────────
-  try {
-    const result = await _callOpenAI(system, user, maxTokens, history);
-    if (result) { console.warn('[Bot] Fallback → OpenAI'); return result; }
-  } catch (e) {
-    console.warn('[Bot] OpenAI fallback:', e.response?.data?.error?.message ?? e.message);
-  }
+    // ── 2. OpenAI ───────────────────────────────────────────────────────────
+    try {
+      const result = await _callOpenAI(system, user, maxTokens, history);
+      if (result) { console.warn('[Bot] Fallback → OpenAI'); return result; }
+    } catch (e) {
+      console.warn('[Bot] OpenAI fallback:', e.response?.data?.error?.message ?? e.message);
+    }
 
-  // ── 3. Groq ───────────────────────────────────────────────────────────────
-  try {
-    const result = await _callGroq(system, user, maxTokens, history);
-    if (result) { console.warn('[Bot] Fallback → Groq'); return result; }
-  } catch (e) {
-    console.warn('[Bot] Groq fallback:', e.response?.data?.error?.message ?? e.message);
-  }
+    // ── 3. Groq ─────────────────────────────────────────────────────────────
+    try {
+      const result = await _callGroq(system, user, maxTokens, history);
+      if (result) { console.warn('[Bot] Fallback → Groq'); return result; }
+    } catch (e) {
+      console.warn('[Bot] Groq fallback:', e.response?.data?.error?.message ?? e.message);
+    }
 
-  // ── 4. Cerebras ───────────────────────────────────────────────────────────
-  try {
-    const result = await _callCerebras(system, user, maxTokens, history);
-    if (result) { console.warn('[Bot] Fallback → Cerebras'); return result; }
-  } catch (e) {
-    console.warn('[Bot] Cerebras fallback:', e.response?.data?.error?.message ?? e.message);
-  }
+    // ── 4. Cerebras ─────────────────────────────────────────────────────────
+    try {
+      const result = await _callCerebras(system, user, maxTokens, history);
+      if (result) { console.warn('[Bot] Fallback → Cerebras'); return result; }
+    } catch (e) {
+      console.warn('[Bot] Cerebras fallback:', e.response?.data?.error?.message ?? e.message);
+    }
 
-  console.error('[Bot] Tutti i provider AI hanno fallito');
-  return null;
+    console.error('[Bot] Tutti i provider AI hanno fallito');
+    return null;
+  };
+
+  // Timeout globale 20s sull'intera catena
+  const _timeout = new Promise(resolve =>
+    setTimeout(() => {
+      console.error('[Bot] AI chain timeout (20s) — nessun provider AI ha risposto in tempo');
+      resolve(null);
+    }, 20_000)
+  );
+
+  return Promise.race([_chain(), _timeout]);
 }
 
 // ─── Twitch app token (EventSub) ──────────────────────────────────────────────
@@ -320,7 +338,7 @@ async function generateUserNotes(streamerId, username, recentMessages, existingN
     : '';
   const system = `Sei un sistema di profilazione utenti per un bot Twitch. Analizza i messaggi e identifica informazioni rilevanti e persistenti sull'utente.`;
   const prompt = `Basandoti su questi ultimi messaggi di ${username}:\n${recentMessages.join('\n')}\n\nEstrai solo info rilevanti e persistenti (giochi preferiti, ruolo nella community, info personali dette esplicitamente).${existingPart}\n\nRispondi SOLO con le note in formato testo breve, max 200 caratteri. Se non ci sono info rilevanti, rispondi con stringa vuota.`;
-  const raw = await gemini(system, prompt, 256, 64);
+  const raw = await gemini(system, prompt, 256, 0);
   if (!raw || raw.trim().length < 5) return null;
   return raw.trim().slice(0, 200);
 }
@@ -442,7 +460,9 @@ async function registerEventSub(broadcasterId, streamer) {
       );
     } catch (e) {
       const status = e.response?.status;
-      if (status !== 409) {
+      if (status === 409) {
+        console.log('[EventSub] Subscription già esistente (409) per', sub.type, '@' + streamer.twitch_username);
+      } else {
         console.warn(`[EventSub] ${sub.type} @${streamer.twitch_username}: ${e.response?.data?.message ?? e.message}`);
         if (sub.needsUserToken && (status === 401 || status === 403)) {
           markNeedsReauth(streamer.streamer_id, streamer.twitch_username);
@@ -625,7 +645,7 @@ Rispondi SOLO con JSON array: [{"category":"utente|inside_joke|evento|promessa|n
 Se non ci sono informazioni di qualità sufficiente rispondi con [].`;
 
   try {
-    const raw = await gemini(system, snapshot.join('\n'), 512, 256);
+    const raw = await gemini(system, snapshot.join('\n'), 512, 0);
     if (!raw) return;
     const match = raw.match(/\[[\s\S]*\]/);
     if (!match) return;
@@ -785,7 +805,7 @@ ${streamer.bot_personality || ''}
 Scrivi un messaggio breve (max 200 caratteri) in italiano per questo evento: ${desc}.
 Rispondi SOLO con il messaggio.`;
 
-  const raw = await gemini(system, desc, 256, 128);
+  const raw = await gemini(system, desc, 256, 0);
   return truncate(raw, 200) ?? fallback[eventType] ?? null;
 }
 
@@ -1560,7 +1580,10 @@ class BotManager {
     // Trova lo streamer dalla mappa
     const streamer = Object.values(this.channelMap)
       .find(s => s.twitch_id === broadcasterId || s.twitch_id === String(broadcasterId));
-    if (!streamer) return;
+    if (!streamer) {
+      console.warn('[EventSub] Streamer non trovato per broadcasterId:', broadcasterId, '— twitch_id mancante o non corrispondente nel DB');
+      return;
+    }
 
     const channel = '#' + streamer.twitch_username.toLowerCase();
     const limits  = getLimits(streamer.subscription_plan);
