@@ -93,13 +93,28 @@ const steps = [
 
 const plans = [
   {
+    id: 'free',
+    name: 'Free',
+    price: '0',
+    desc: 'Nessuna carta di credito richiesta',
+    features: [
+      'Bot AI di base',
+      'Showstarter automatico al go-live',
+      'Benvenuto nuovi follower',
+      'Ringraziamenti eventi (sub, gift, cheer, raid)',
+      'Lurker Love (!lurk)',
+    ],
+    cta: 'Inizia gratis →',
+    highlight: false,
+  },
+  {
     id: 'starter',
     name: 'Starter',
-    price: '9',
+    price: '12',
     desc: 'Per chi inizia',
     features: [
       'Bot AI base con personalità configurabile',
-      'Max 5 membri configurabili',
+      'Max 10 membri configurabili',
       'Risposte automatiche: follow e sub',
       'Max 200 messaggi/sera sul canale',
       '4.000 messaggi/mese',
@@ -111,16 +126,14 @@ const plans = [
   {
     id: 'creator',
     name: 'Creator',
-    price: '19',
+    price: '24',
     desc: 'Per streamer in crescita',
     features: [
       'Bot AI completamente personalizzato',
-      'Membri illimitati',
       'Song request Spotify (!sr)',
       'Memoria base (apprendimento automatico)',
-      'Tutti gli eventi automatici (follow, sub, gift, bit, hype train, raid)',
+      'Tutti gli eventi automatici',
       'Discord: notifiche live e video',
-      'Comandi custom configurabili',
       'Max 600 messaggi/sera sul canale',
       '12.000 messaggi/mese',
       'Trial 7 giorni con carta',
@@ -131,7 +144,7 @@ const plans = [
   {
     id: 'elite',
     name: 'Elite',
-    price: '35',
+    price: '44',
     desc: 'Il più scelto',
     badge: 'Più popolare',
     features: [
@@ -149,7 +162,7 @@ const plans = [
   {
     id: 'signature',
     name: 'Signature',
-    price: '85',
+    price: '99',
     desc: 'Il massimo, senza limiti',
     features: [
       'Tutto di Elite',
@@ -302,10 +315,11 @@ const STRUCTURED_DATA_APP = {
   operatingSystem: 'Web',
   url: 'https://streamindai.com',
   offers: [
-    { '@type': 'Offer', name: 'Starter', price: '9.00', priceCurrency: 'EUR', description: 'Bot AI base, 4.000 messaggi/mese, trial 7 giorni' },
-    { '@type': 'Offer', name: 'Creator', price: '19.00', priceCurrency: 'EUR', description: 'Song request Spotify, Discord, 12.000 messaggi/mese, trial 7 giorni' },
-    { '@type': 'Offer', name: 'Elite',   price: '35.00', priceCurrency: 'EUR', description: 'Analytics, memoria avanzata, 24.000 messaggi/mese, trial 7 giorni' },
-    { '@type': 'Offer', name: 'Signature', price: '85.00', priceCurrency: 'EUR', description: 'Onboarding 1:1, setup personalizzato, 60.000 messaggi/mese' },
+    { '@type': 'Offer', name: 'Free',      price: '0.00',  priceCurrency: 'EUR', description: 'Bot AI di base, eventi automatici, nessuna carta richiesta' },
+    { '@type': 'Offer', name: 'Starter',   price: '12.00', priceCurrency: 'EUR', description: 'Bot AI base, 4.000 messaggi/mese, trial 7 giorni' },
+    { '@type': 'Offer', name: 'Creator',   price: '24.00', priceCurrency: 'EUR', description: 'Song request Spotify, Discord, 12.000 messaggi/mese, trial 7 giorni' },
+    { '@type': 'Offer', name: 'Elite',     price: '44.00', priceCurrency: 'EUR', description: 'Analytics, memoria avanzata, 24.000 messaggi/mese, trial 7 giorni' },
+    { '@type': 'Offer', name: 'Signature', price: '99.00', priceCurrency: 'EUR', description: 'Onboarding 1:1, setup personalizzato, 60.000 messaggi/mese' },
   ],
 };
 
@@ -583,7 +597,7 @@ export default function LandingPage({ user, loading, onLogout }) {
             </p>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 items-start">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-5 items-start">
             {plans.map((plan) => (
               <div
                 key={plan.id}
