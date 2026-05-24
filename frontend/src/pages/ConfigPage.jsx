@@ -233,6 +233,7 @@ const EMPTY = {
   spotify_client_secret: '',
   spotify_connected:     false,
   discord_bot_token:     '',
+  discord_connected:     false,
   user_msg_nonsub:       null,
   user_msg_subvip:       null,
 };
@@ -300,10 +301,11 @@ export default function ConfigPage() {
           members:               (d.members ?? []).map(m => ({ ...m, id: _mid++ })),
           custom_commands:       d.custom_commands       ?? [],
           event_messages:        d.event_messages        ?? { ...EMPTY_EVENT_MESSAGES },
-          spotify_client_id:     d.spotify_client_id     ?? '',
-          spotify_client_secret: d.spotify_client_secret ?? '',
-          spotify_connected:     d.spotify_connected     ?? false,
-          discord_bot_token:     d.discord_bot_token     ?? '',
+          spotify_client_id:     d.spotify_client_id  ?? '',
+          spotify_client_secret: '',
+          spotify_connected:     d.spotify_connected  ?? false,
+          discord_bot_token:     '',
+          discord_connected:     d.discord_connected  ?? false,
           user_msg_nonsub:       d.user_msg_nonsub       ?? null,
           user_msg_subvip:       d.user_msg_subvip       ?? null,
         });
@@ -1046,7 +1048,7 @@ export default function ConfigPage() {
                 type="password"
                 value={config.spotify_client_secret}
                 onChange={e => set('spotify_client_secret', e.target.value)}
-                placeholder="••••••••••••••••"
+                placeholder={config.spotify_connected ? 'Già configurato — lascia vuoto per non modificare' : 'Incolla il Client Secret Spotify'}
                 className="input-base"
               />
             </Field>
@@ -1098,7 +1100,7 @@ export default function ConfigPage() {
                 type={discordShowToken ? 'text' : 'password'}
                 value={config.discord_bot_token}
                 onChange={e => set('discord_bot_token', e.target.value)}
-                placeholder="MTA1NTk0Nj..."
+                placeholder={config.discord_connected ? 'Già configurato — lascia vuoto per non modificare' : 'MTA1NTk0Nj...'}
                 className="input-base pr-10"
               />
               <button
@@ -1115,7 +1117,7 @@ export default function ConfigPage() {
             </div>
           </Field>
 
-          {config.discord_bot_token && (
+          {(config.discord_bot_token || config.discord_connected) && (
             <div className="flex items-center gap-2 text-xs" style={{ color: '#4ade80' }}>
               <span className="w-1.5 h-1.5 rounded-full bg-green-400 shrink-0" />
               Token configurato

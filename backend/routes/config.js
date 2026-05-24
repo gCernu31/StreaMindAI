@@ -3,6 +3,7 @@ import pool from '../db.js';
 import { requireAuth } from '../middleware/auth.js';
 import { invalidateBotPromptCache } from '../services/promptBuilder.js';
 import { botManager } from '../bot/botManager.js';
+import { encrypt } from '../utils/encryption.js';
 
 export const configRoutes = Router();
 
@@ -42,10 +43,9 @@ configRoutes.get('/', requireAuth, async (req, res) => {
       members:            tryParse(cfg.members,          []),
       ai_provider:        cfg.ai_provider ?? 'gemini',
       event_messages:     tryParse(cfg.event_messages,  {}),
-      spotify_client_id:     cfg.spotify_client_id     ?? '',
-      spotify_client_secret: cfg.spotify_client_secret ?? '',
-      spotify_connected:     !!cfg.spotify_access_token,
-      discord_bot_token:          cfg.discord_bot_token          ?? '',
+      spotify_client_id:  cfg.spotify_client_id ?? '',
+      spotify_connected:  !!cfg.spotify_access_token,
+      discord_connected:  !!cfg.discord_bot_token,
       bot_active:                 cfg.bot_active                 ?? true,
       last_name_change:           cfg.last_name_change           ?? null,
       name_changes_this_month:    cfg.name_changes_this_month    ?? 0,
@@ -113,6 +113,14 @@ configRoutes.put('/', requireAuth, async (req, res) => {
     discord_bot_token,
     user_msg_nonsub, user_msg_subvip,
   } = req.body;
+
+  // ── Validazione lunghezza campi liberi ────────────────────────────────────────
+  if (bot_personality && bot_personality.length > 2000) {
+    return res.status(400).json({ error: 'Personalità bot troppo lunga (max 2000 caratteri).' });
+  }
+  if (custom_commands && JSON.stringify(custom_commands).length > 5000) {
+    return res.status(400).json({ error: 'Comandi custom troppo lunghi (max 5000 caratteri JSON).' });
+  }
 
   try {
     // Salva snapshot corrente nella cronologia prima di sovrascrivere
@@ -200,9 +208,9 @@ configRoutes.put('/', requireAuth, async (req, res) => {
         ai_provider            ?? null,
         req.user.streamer_id,
         event_messages         != null ? JSON.stringify(event_messages)     : null,
-        spotify_client_id      ?? null,
-        spotify_client_secret  ?? null,
-        discord_bot_token      ?? null,
+        spotify_client_id || null,
+        spotify_client_secret ? encrypt(spotify_client_secret) : null,
+        discord_bot_token ? encrypt(discord_bot_token) : null,
         user_msg_nonsub        != null ? Number(user_msg_nonsub) : null,
         user_msg_subvip        != null ? Number(user_msg_subvip) : null,
       ]
@@ -226,23 +234,22 @@ configRoutes.put('/', requireAuth, async (req, res) => {
 
     const cfg = rows[0];
     res.json({
-      success:               true,
-      bot_name:              cfg.bot_name,
-      creator_name:          cfg.creator_name,
-      bot_personality:       cfg.bot_personality,
-      twitch_username:       cfg.twitch_username,
-      stream_schedule:       tryParse(cfg.stream_schedule, { days: [], time_start: '21:00', time_end: '00:00' }),
-      social_links:          tryParse(cfg.social_links,    { linktree: '', instagram: '', youtube: '', discord: '' }),
-      custom_commands:       tryParse(cfg.custom_commands, []),
-      members:               tryParse(cfg.members,          []),
-      ai_provider:           cfg.ai_provider,
-      event_messages:        tryParse(cfg.event_messages,  {}),
-      spotify_client_id:     cfg.spotify_client_id     ?? '',
-      spotify_client_secret: cfg.spotify_client_secret ?? '',
-      spotify_connected:     !!cfg.spotify_access_token,
-      discord_bot_token:     cfg.discord_bot_token      ?? '',
-      user_msg_nonsub:       cfg.user_msg_nonsub        ?? null,
-      user_msg_subvip:       cfg.user_msg_subvip        ?? null,
+      success:          true,
+      bot_name:         cfg.bot_name,
+      creator_name:     cfg.creator_name,
+      bot_personality:  cfg.bot_personality,
+      twitch_username:  cfg.twitch_username,
+      stream_schedule:  tryParse(cfg.stream_schedule, { days: [], time_start: '21:00', time_end: '00:00' }),
+      social_links:     tryParse(cfg.social_links,    { linktree: '', instagram: '', youtube: '', discord: '' }),
+      custom_commands:  tryParse(cfg.custom_commands, []),
+      members:          tryParse(cfg.members,          []),
+      ai_provider:      cfg.ai_provider,
+      event_messages:   tryParse(cfg.event_messages,  {}),
+      spotify_client_id: cfg.spotify_client_id ?? '',
+      spotify_connected: !!cfg.spotify_access_token,
+      discord_connected: !!cfg.discord_bot_token,
+      user_msg_nonsub:  cfg.user_msg_nonsub ?? null,
+      user_msg_subvip:  cfg.user_msg_subvip ?? null,
     });
   } catch (err) {
     console.error(err);

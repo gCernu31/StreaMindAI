@@ -182,54 +182,61 @@ export default function ProvaGratisPage({ user, loading: authLoading, onLogout }
       return;
     }
 
-    // Abbonati → dashboard analisi
-    const ss = user.subscription_status;
-    if (ss === 'active' || ss === 'trialing' || ss === 'cancelling') {
-      navigate('/analisi', { replace: true });
-      return;
-    }
-
     const token = getToken();
 
-    fetch('/api/analytics/my-analysis', {
-      headers: { Authorization: `Bearer ${token}` },
-    })
-      .then(r => r.ok ? r.json() : null)
-      .then(data => {
-        if (data?.analysis) {
-          setSlides(parseSlides(data.analysis, user.twitch_username ?? ''));
-          setAnalysisId(data.id ?? null);
-          setPageState('C');
+    // Verifica abbonamento aggiornato dal DB (non dal JWT che potrebbe essere stale)
+    fetch('/api/subscription', { headers: { Authorization: `Bearer ${token}` } })
+      .then(r => r.ok ? r.json() : { status: 'inactive' })
+      .then(sub => {
+        if (sub.status === 'active' || sub.status === 'trialing' || sub.status === 'cancelling') {
+          navigate('/analisi', { replace: true });
           return;
         }
-        setPrefillLoading(true);
-        return fetch('/api/analytics/twitch-data', {
+
+        fetch('/api/analytics/my-analysis', {
           headers: { Authorization: `Bearer ${token}` },
         })
           .then(r => r.ok ? r.json() : null)
-          .then(tw => {
-            const prefills  = { twitch_username: tw?.twitch_username ?? user.twitch_username ?? '' };
-            const fetched   = {};
-            if (tw?.total_followers != null) { prefills.total_followers = String(tw.total_followers); fetched.total_followers = true; }
-            if (tw?.main_games)              { prefills.main_games      = tw.main_games;              fetched.main_games      = true; }
-            if (tw?.avg_viewers  != null)    { prefills.avg_viewers     = String(tw.avg_viewers);     fetched.avg_viewers     = true; }
-            if (tw?.total_views  != null)    { prefills.total_views     = String(tw.total_views); }
-            if (tw?.created_at)              { prefills.created_at      = tw.created_at; }
-            if (tw?.is_live)                 { prefills.is_live = true; setIsLive(true); }
-            setForm(prev => ({ ...prev, ...prefills }));
-            setFetchedFields(fetched);
-            setPageState('B');
+          .then(data => {
+            if (data?.analysis) {
+              setSlides(parseSlides(data.analysis, user.twitch_username ?? ''));
+              setAnalysisId(data.id ?? null);
+              setPageState('C');
+              return;
+            }
+            setPrefillLoading(true);
+            fetch('/api/analytics/twitch-data', {
+              headers: { Authorization: `Bearer ${token}` },
+            })
+              .then(r => r.ok ? r.json() : null)
+              .then(tw => {
+                const prefills  = { twitch_username: tw?.twitch_username ?? user.twitch_username ?? '' };
+                const fetched   = {};
+                if (tw?.total_followers != null) { prefills.total_followers = String(tw.total_followers); fetched.total_followers = true; }
+                if (tw?.main_games)              { prefills.main_games      = tw.main_games;              fetched.main_games      = true; }
+                if (tw?.avg_viewers  != null)    { prefills.avg_viewers     = String(tw.avg_viewers);     fetched.avg_viewers     = true; }
+                if (tw?.total_views  != null)    { prefills.total_views     = String(tw.total_views); }
+                if (tw?.created_at)              { prefills.created_at      = tw.created_at; }
+                if (tw?.is_live)                 { prefills.is_live = true; setIsLive(true); }
+                setForm(prev => ({ ...prev, ...prefills }));
+                setFetchedFields(fetched);
+                setPageState('B');
+              })
+              .catch(() => {
+                setForm(prev => ({ ...prev, twitch_username: user.twitch_username ?? '' }));
+                setPageState('B');
+              })
+              .finally(() => setPrefillLoading(false));
           })
           .catch(() => {
             setForm(prev => ({ ...prev, twitch_username: user.twitch_username ?? '' }));
             setPageState('B');
-          })
-          .finally(() => setPrefillLoading(false));
+            setPrefillLoading(false);
+          });
       })
       .catch(() => {
         setForm(prev => ({ ...prev, twitch_username: user.twitch_username ?? '' }));
         setPageState('B');
-        setPrefillLoading(false);
       });
   }, [authLoading, user]);
 

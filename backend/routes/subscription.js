@@ -154,14 +154,21 @@ async function handleCheckout(req, res) {
       );
     }
 
-    // Trial solo per piano mensile senza PayPal
-    let trialDays = (PLANS_WITH_TRIAL.has(plan) && !usePayPal && period === 'monthly') ? 7 : undefined;
-    if (trialDays) {
-      const { rows: refRows } = await pool.query(
-        `SELECT id FROM referrals WHERE referred_id = $1 AND status = 'pending' LIMIT 1`,
+    // Trial solo per piano mensile senza PayPal e se non già utilizzato
+    let trialDays;
+    if (PLANS_WITH_TRIAL.has(plan) && !usePayPal && period === 'monthly') {
+      const { rows: trialRow } = await pool.query(
+        'SELECT trial_used FROM streamers WHERE id = $1',
         [req.user.streamer_id]
       );
-      if (refRows[0]) trialDays = 14;
+      if (!trialRow[0]?.trial_used) {
+        trialDays = 7;
+        const { rows: refRows } = await pool.query(
+          `SELECT id FROM referrals WHERE referred_id = $1 AND status = 'pending' LIMIT 1`,
+          [req.user.streamer_id]
+        );
+        if (refRows[0]) trialDays = 14;
+      }
     }
 
     const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
@@ -338,9 +345,10 @@ export async function stripeWebhook(req, res) {
                subscription_plan      = $2,
                stripe_subscription_id = $3,
                stripe_customer_id     = $4,
-               subscription_end       = to_timestamp($5)
-           WHERE id = $6`,
-          [checkoutStatus, plan, sub.id, sub.customer, sub.current_period_end, streamerId]
+               subscription_end       = to_timestamp($5),
+               trial_used             = (trial_used OR $6)
+           WHERE id = $7`,
+          [checkoutStatus, plan, sub.id, sub.customer, sub.current_period_end, checkoutStatus === 'trialing', streamerId]
         );
         // Connette immediatamente il bot al canale senza attendere il sync periodico
         const { rows: newUser } = await pool.query(

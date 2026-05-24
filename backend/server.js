@@ -1,5 +1,6 @@
 import express from 'express';
 import cors from 'cors';
+import rateLimit from 'express-rate-limit';
 import dotenv from 'dotenv';
 import { createRequire } from 'module';
 import { fileURLToPath } from 'url';
@@ -27,6 +28,11 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const app  = express();
 const PORT = process.env.PORT || 3001;
 const isProd = process.env.NODE_ENV === 'production';
+
+// ── Rate limiting ─────────────────────────────────────────────────────────────
+const analyticLimiter = rateLimit({ windowMs: 60*60*1000, max: 5,  standardHeaders: true, legacyHeaders: false, message: { error: "Troppe richieste. Riprova tra un'ora." } });
+const contactLimiter  = rateLimit({ windowMs: 60*60*1000, max: 10, standardHeaders: true, legacyHeaders: false, message: { error: "Troppe richieste. Riprova tra un'ora." } });
+const authLimiter     = rateLimit({ windowMs: 15*60*1000, max: 20, standardHeaders: true, legacyHeaders: false, message: { error: 'Troppe richieste di autenticazione.' } });
 
 // ── CORS ──────────────────────────────────────────────────────────────────────
 // Supporta CORS_ORIGINS (lista separata da virgola) o il singolo FRONTEND_URL
@@ -137,6 +143,11 @@ app.get('/api/me', authenticateToken, async (req, res) => {
     res.status(500).json({ error: 'Errore nel recupero del profilo' });
   }
 });
+
+// ── Rate limiters specifici (prima del mount delle route) ────────────────────
+app.use('/api/analytics/analyze', analyticLimiter);
+app.use('/api/contact',           contactLimiter);
+app.use('/api/auth',              authLimiter);
 
 // ── Route pubbliche (no auth) ─────────────────────────────────────────────────
 app.use('/api/analytics',   analyticsRoutes);

@@ -418,3 +418,24 @@ $$;
 CREATE UNIQUE INDEX IF NOT EXISTS idx_analytics_leads_twitch_id
   ON analytics_leads (twitch_id)
   WHERE twitch_id IS NOT NULL;
+
+-- UUID pubblico per link condivisibili (non espone ID numerici sequenziali)
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='analytics_leads' AND column_name='public_token') THEN
+    ALTER TABLE analytics_leads ADD COLUMN public_token UUID DEFAULT gen_random_uuid();
+    UPDATE analytics_leads SET public_token = gen_random_uuid() WHERE public_token IS NULL;
+  END IF;
+END;
+$$;
+
+-- Flag utilizzo trial (impedisce trial ripetuti su riabbonamento)
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='streamers' AND column_name='trial_used') THEN
+    ALTER TABLE streamers ADD COLUMN trial_used BOOLEAN NOT NULL DEFAULT FALSE;
+    -- Segna come trial_used gli utenti che hanno già avuto uno stato trialing
+    UPDATE streamers SET trial_used = TRUE WHERE subscription_status = 'trialing';
+  END IF;
+END;
+$$;

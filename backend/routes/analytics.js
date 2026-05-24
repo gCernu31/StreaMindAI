@@ -353,7 +353,7 @@ analyticsRoutes.get('/my-analysis', requireAuth, async (req, res) => {
   const { twitch_id } = req.user;
   try {
     const { rows } = await pool.query(
-      `SELECT id, twitch_username, analysis_generated, generated_at, next_generation_at, form_data
+      `SELECT id, public_token, twitch_username, analysis_generated, generated_at, next_generation_at, form_data
        FROM analytics_leads WHERE twitch_id = $1`,
       [twitch_id]
     );
@@ -362,6 +362,7 @@ analyticsRoutes.get('/my-analysis', requireAuth, async (req, res) => {
     }
     res.json({
       id:                 rows[0].id,
+      public_token:       rows[0].public_token,
       analysis:           rows[0].analysis_generated,
       generated_at:       rows[0].generated_at,
       next_generation_at: rows[0].next_generation_at,
@@ -409,15 +410,16 @@ analyticsRoutes.post('/generate', requireAuth, async (req, res) => {
     }));
     const nextGen = new Date(Date.now() + 30 * 24 * 60 * 60_000);
 
-    let id;
+    let id, public_token;
     if (existing[0]) {
       const { rows } = await pool.query(
         `UPDATE analytics_leads
          SET analysis_generated=$1, generated_at=NOW(), next_generation_at=$2, form_data=$3
-         WHERE twitch_id=$4 RETURNING id`,
+         WHERE twitch_id=$4 RETURNING id, public_token`,
         [analysis, nextGen, JSON.stringify(formData), twitch_id]
       );
       id = rows[0].id;
+      public_token = rows[0].public_token;
     } else {
       const { rows: sRows } = await pool.query(
         `SELECT email FROM streamers WHERE id = $1`, [streamer_id]
@@ -426,13 +428,14 @@ analyticsRoutes.post('/generate', requireAuth, async (req, res) => {
       const { rows } = await pool.query(
         `INSERT INTO analytics_leads
            (twitch_id, twitch_username, email, form_data, analysis_generated, generated_at, next_generation_at)
-         VALUES ($1,$2,$3,$4,$5,NOW(),$6) RETURNING id`,
+         VALUES ($1,$2,$3,$4,$5,NOW(),$6) RETURNING id, public_token`,
         [twitch_id, usernameForPrompt, email, JSON.stringify(formData), analysis, nextGen]
       );
       id = rows[0].id;
+      public_token = rows[0].public_token;
     }
 
-    res.json({ analysis, id });
+    res.json({ analysis, id, public_token });
   } catch (err) {
     console.error('[Analytics] generate:', err.message);
     if (err.response?.status === 429) {
@@ -442,18 +445,28 @@ analyticsRoutes.post('/generate', requireAuth, async (req, res) => {
   }
 });
 
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 // ── GET /api/analytics/:id — recupera analisi pubblica per link condivisibile ──
+// Accetta sia UUID (public_token) che ID numerico (backward compat per link esistenti)
 analyticsRoutes.get('/:id', async (req, res) => {
-  const id = parseInt(req.params.id, 10);
-  if (!Number.isInteger(id) || id < 1) {
-    return res.status(400).json({ error: 'ID non valido.' });
+  const param = req.params.id;
+  let query, params;
+
+  if (UUID_RE.test(param)) {
+    query  = `SELECT id, twitch_username, analysis_generated, created_at FROM analytics_leads WHERE public_token = $1`;
+    params = [param];
+  } else {
+    const id = parseInt(param, 10);
+    if (!Number.isInteger(id) || id < 1) {
+      return res.status(400).json({ error: 'ID non valido.' });
+    }
+    query  = `SELECT id, twitch_username, analysis_generated, created_at FROM analytics_leads WHERE id = $1`;
+    params = [id];
   }
+
   try {
-    const { rows } = await pool.query(
-      `SELECT id, twitch_username, analysis_generated, created_at
-       FROM analytics_leads WHERE id = $1`,
-      [id]
-    );
+    const { rows } = await pool.query(query, params);
     if (!rows[0] || !rows[0].analysis_generated) {
       return res.status(404).json({ error: 'Analisi non trovata.' });
     }
@@ -533,7 +546,7 @@ analyticsRoutes.post('/analyze', async (req, res) => {
     // 2. Salva nel DB
     const { rows } = await pool.query(
       `INSERT INTO analytics_leads (email, twitch_username, form_data, analysis_generated)
-       VALUES ($1, $2, $3, $4) RETURNING id`,
+       VALUES ($1, $2, $3, $4) RETURNING id, public_token`,
       [
         email.trim().toLowerCase(),
         formData.twitch_username || null,
@@ -549,7 +562,7 @@ analyticsRoutes.post('/analyze', async (req, res) => {
       analysis,
     }).catch(err => console.error('[Email] analysis-report:', err.message));
 
-    res.json({ analysis, id: rows[0].id });
+    res.json({ analysis, id: rows[0].id, public_token: rows[0].public_token });
 
   } catch (err) {
     console.error('Analytics analyze error:', err.message);

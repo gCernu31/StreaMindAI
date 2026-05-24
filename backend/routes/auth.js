@@ -5,6 +5,7 @@ import pool from '../db.js';
 import { authenticateToken } from '../middleware/auth.js';
 import { sendWelcomeEmail } from '../services/emailService.js';
 import { botManager } from '../bot/botManager.js';
+import { encrypt, decrypt } from '../utils/encryption.js';
 
 export const authRoutes = Router();
 
@@ -96,8 +97,8 @@ authRoutes.get('/twitch/callback', async (req, res) => {
       tw.display_name,
       tw.email || null,
       tw.profile_image_url || null,
-      access_token,
-      refresh_token || null,
+      encrypt(access_token),
+      refresh_token ? encrypt(refresh_token) : null,
       tokenExpiresAt,
     ]);
 
@@ -148,12 +149,11 @@ authRoutes.get('/twitch/callback', async (req, res) => {
     // 5. Genera JWT sessione con i dati essenziali
     const sessionToken = jwt.sign(
       {
-        streamer_id:      streamer.id,
-        twitch_id:        tw.id,
-        twitch_username:  tw.login,
-        display_name:     tw.display_name,
-        avatar:           tw.profile_image_url,
-        subscription_status: streamer.subscription_status,
+        streamer_id:     streamer.id,
+        twitch_id:       tw.id,
+        twitch_username: tw.login,
+        display_name:    tw.display_name,
+        avatar:          tw.profile_image_url,
       },
       process.env.JWT_SECRET,
       { expiresIn: '7d' }
