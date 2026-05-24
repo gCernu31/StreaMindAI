@@ -429,6 +429,15 @@ BEGIN
 END;
 $$;
 
+-- Soprannome utente rilevato automaticamente dal bot AI
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='bot_users' AND column_name='nickname') THEN
+    ALTER TABLE bot_users ADD COLUMN nickname VARCHAR(100);
+  END IF;
+END;
+$$;
+
 -- Flag utilizzo trial (impedisce trial ripetuti su riabbonamento)
 DO $$
 BEGIN

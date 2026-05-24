@@ -370,11 +370,13 @@ function parseAiResponse(raw) {
 
 // ─── Contesto utenti noti (per system prompt) ─────────────────────────────────
 
-function buildUserContext(streamerId) {
-  const activeMap = sessionActiveUsers.get(streamerId);
-  if (!activeMap) return null;
+function buildUserContext(streamerId, mentionedNames = []) {
+  const activeMap = sessionActiveUsers.get(streamerId) ?? new Map();
   const sorted = [...activeMap.entries()].sort((a, b) => b[1] - a[1]);
   const lines = [];
+  const seen  = new Set();
+
+  // 1. Utenti attivi nella sessione corrente (max 5, ordinati per recency)
   for (const [uname] of sorted) {
     const cached = userCache.get(`${streamerId}:${uname}`);
     if (!cached?.notes && !cached?.nickname) continue;
@@ -382,8 +384,21 @@ function buildUserContext(streamerId) {
     if (cached.nickname) parts.push(`soprannome: "${cached.nickname}"`);
     if (cached.notes)    parts.push(`note: "${cached.notes}"`);
     lines.push(`- ${uname} | ${parts.join(' | ')}`);
+    seen.add(uname);
     if (lines.length >= 5) break;
   }
+
+  // 2. Utenti menzionati nel messaggio ma non ancora in sessione
+  for (const name of mentionedNames) {
+    if (seen.has(name)) continue;
+    const cached = userCache.get(`${streamerId}:${name}`);
+    if (!cached?.nickname && !cached?.notes) continue;
+    const parts = [];
+    if (cached.nickname) parts.push(`soprannome: "${cached.nickname}"`);
+    if (cached.notes)    parts.push(`note: "${cached.notes}"`);
+    lines.push(`- ${name} | ${parts.join(' | ')}`);
+  }
+
   if (lines.length === 0) return null;
   return `Utenti noti in questo canale:\n${lines.join('\n')}`;
 }
@@ -1379,7 +1394,10 @@ class BotManager {
     activeMap.set(username, Date.now());
     sessionActiveUsers.set(streamer.streamer_id, activeMap);
 
-    const userCtx = buildUserContext(streamer.streamer_id);
+    const mentionedNames = [...question.matchAll(/\b([a-z0-9_]{2,25})\b/gi)]
+      .map(m => m[1].toLowerCase())
+      .filter(n => n !== username.toLowerCase());
+    const userCtx = buildUserContext(streamer.streamer_id, mentionedNames);
     if (userCtx) {
       systemPrompt += `\n\n${userCtx}`;
     }
