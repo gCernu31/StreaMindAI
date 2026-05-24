@@ -24,6 +24,13 @@ const PRICE_IDS = {
   signature: process.env.STRIPE_PRICE_SIGNATURE,
 };
 
+const PERIOD_PRICE_IDS = {
+  starter:   { '3m': process.env.STRIPE_PRICE_STARTER_3M,   '6m': process.env.STRIPE_PRICE_STARTER_6M,   '12m': process.env.STRIPE_PRICE_STARTER_12M   },
+  creator:   { '3m': process.env.STRIPE_PRICE_CREATOR_3M,   '6m': process.env.STRIPE_PRICE_CREATOR_6M,   '12m': process.env.STRIPE_PRICE_CREATOR_12M   },
+  elite:     { '3m': process.env.STRIPE_PRICE_ELITE_3M,     '6m': process.env.STRIPE_PRICE_ELITE_6M,     '12m': process.env.STRIPE_PRICE_ELITE_12M     },
+  signature: { '3m': process.env.STRIPE_PRICE_SIGNATURE_3M, '6m': process.env.STRIPE_PRICE_SIGNATURE_6M, '12m': process.env.STRIPE_PRICE_SIGNATURE_12M },
+};
+
 const TOKEN_PACK = {
   priceId:  process.env.STRIPE_PRICE_TOKEN_PACK, // prodotto one-time 6€ su Stripe
   messages: 5_000,
@@ -105,13 +112,26 @@ subscriptionRoutes.get('/invoices', requireAuth, async (req, res) => {
 async function handleCheckout(req, res) {
   if (stripeRequired(res)) return;
   try {
-    const plan    = req.body.plan ?? req.body.planId;
+    const plan      = req.body.plan ?? req.body.planId;
     const usePayPal = req.body.paypal === true;
+    const period    = req.body.period ?? 'monthly'; // 'monthly' | '3m' | '6m' | '12m'
 
-    if (!plan || !PRICE_IDS[plan]) {
-      return res.status(400).json({
-        error: `Piano non valido o STRIPE_PRICE_${(plan ?? '').toUpperCase()} non configurato.`,
-      });
+    let priceId;
+    if (period === 'monthly') {
+      if (!plan || !PRICE_IDS[plan]) {
+        return res.status(400).json({
+          error: `Piano non valido o STRIPE_PRICE_${(plan ?? '').toUpperCase()} non configurato.`,
+        });
+      }
+      priceId = PRICE_IDS[plan];
+    } else {
+      const periodId = PERIOD_PRICE_IDS[plan]?.[period];
+      if (!periodId) {
+        return res.status(400).json({
+          error: `Price ID non configurato per ${plan} ${period}.`,
+        });
+      }
+      priceId = periodId;
     }
 
     const { rows } = await pool.query(
@@ -134,8 +154,8 @@ async function handleCheckout(req, res) {
       );
     }
 
-    // PayPal non supporta trial — se l'utente sceglie PayPal, nessun trial
-    let trialDays = (PLANS_WITH_TRIAL.has(plan) && !usePayPal) ? 7 : undefined;
+    // Trial solo per piano mensile senza PayPal
+    let trialDays = (PLANS_WITH_TRIAL.has(plan) && !usePayPal && period === 'monthly') ? 7 : undefined;
     if (trialDays) {
       const { rows: refRows } = await pool.query(
         `SELECT id FROM referrals WHERE referred_id = $1 AND status = 'pending' LIMIT 1`,
@@ -149,7 +169,7 @@ async function handleCheckout(req, res) {
       customer:             customerId,
       mode:                 'subscription',
       payment_method_types: usePayPal ? ['paypal'] : ['card'],
-      line_items:           [{ price: PRICE_IDS[plan], quantity: 1 }],
+      line_items:           [{ price: priceId, quantity: 1 }],
       success_url:          `${frontendUrl}/success?plan=${plan}`,
       cancel_url:           `${frontendUrl}/subscription?cancelled=1`,
       metadata:          { streamer_id: String(req.user.streamer_id), plan },
