@@ -4,6 +4,7 @@ import jwt from 'jsonwebtoken';
 import pool from '../db.js';
 import { authenticateToken } from '../middleware/auth.js';
 import { sendWelcomeEmail } from '../services/emailService.js';
+import { botManager } from '../bot/botManager.js';
 
 export const authRoutes = Router();
 
@@ -140,6 +141,9 @@ authRoutes.get('/twitch/callback', async (req, res) => {
        ON CONFLICT (streamer_id) DO NOTHING`,
       [streamer.id, tw.display_name]
     );
+
+    // Re-registra EventSub con il token fresco (fix follow e altri eventi user-token)
+    botManager.refreshEventSub(tw.login).catch(() => {});
 
     // 5. Genera JWT sessione con i dati essenziali
     const sessionToken = jwt.sign(

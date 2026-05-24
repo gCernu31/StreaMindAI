@@ -826,10 +826,28 @@ async function buildEventMessage(streamer, eventType, data) {
     raid:      `@${data.from} ha raidato con ${data.viewers} viewer! Benvenuti tutti 🎉`,
   };
 
+  // 1. Messaggio personalizzato dal DB — usato direttamente con sostituzione variabili
+  const customMessages = parseJson(streamer.event_messages, {});
+  const template = customMessages[eventType];
+  if (template && template.trim()) {
+    const msg = template
+      .replace(/{username}/g,  data.username  ?? '')
+      .replace(/{months}/g,    String(data.months   ?? ''))
+      .replace(/{gifter}/g,    data.gifter    ?? '')
+      .replace(/{recipient}/g, data.recipient ?? '')
+      .replace(/{count}/g,     String(data.total ?? data.viewers ?? ''))
+      .replace(/{bits}/g,      String(data.bits    ?? ''))
+      .replace(/{raider}/g,    data.from      ?? '')
+      .replace(/{level}/g,     String(data.level   ?? ''));
+    return truncate(msg.trim(), 500);
+  }
+
+  // 2. Nessun messaggio personalizzato: fallback per piani base
   if (!limits.customEventMessages) {
     return fallback[eventType] ?? null;
   }
 
+  // 3. Piano elite/signature senza messaggio personalizzato → genera con Gemini
   const descriptions = {
     follow:    `Nuovo follower: @${data.username}`,
     subscribe: `Nuova sub da @${data.username}${data.months > 1 ? ` (${data.months} mesi)` : ''}`,
@@ -879,7 +897,8 @@ async function loadActiveStreamers() {
       bc.user_msg_nonsub,
       bc.user_msg_subvip,
       bc.song_req_nonsub,
-      bc.song_req_subvip
+      bc.song_req_subvip,
+      bc.event_messages
     FROM streamers s
     JOIN bot_configs bc ON bc.streamer_id = s.id
     WHERE s.twitch_username IS NOT NULL
@@ -1192,6 +1211,24 @@ class BotManager {
       }
     } catch (e) {
       console.error(`[Bot] enableBot #${ch}:`, e.message);
+    }
+  }
+
+  // Ri-registra EventSub dopo re-autenticazione Twitch (aggiorna token in memoria)
+  async refreshEventSub(twitchUsername) {
+    const ch = twitchUsername.toLowerCase();
+    if (!process.env.TWITCH_CLIENT_ID || !process.env.APP_URL) return;
+    try {
+      const streamers = await loadActiveStreamers();
+      const fresh = streamers.find(x => x.twitch_username.toLowerCase() === ch);
+      if (!fresh?.twitch_id) return;
+      if (this.channelMap[ch]) this.channelMap[ch] = fresh;
+      console.log(`[EventSub] Ri-registrazione dopo re-auth per @${ch}`);
+      registerEventSub(fresh.twitch_id, fresh).catch(e =>
+        console.warn(`[EventSub] refreshEventSub @${ch}:`, e.message)
+      );
+    } catch (e) {
+      console.warn(`[EventSub] refreshEventSub @${ch}:`, e.message);
     }
   }
 
@@ -1714,6 +1751,7 @@ class BotManager {
 
     const actor = data.username || data.gifter || data.from || 'utente';
     if (!checkEventCooldown(streamer.streamer_id, planEvent, actor)) return;
+    console.log(`[EventSub] ${planEvent} da @${actor} su #${streamer.twitch_username}`);
 
     if (planEvent === 'raid' && data.from) {
       try { await this.client.say(channel, `/shoutout ${data.from}`); } catch {}
