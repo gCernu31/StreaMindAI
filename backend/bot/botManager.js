@@ -77,7 +77,8 @@ const userMessageBuffers = new Map();
 const showstarterCooldowns = new Map();
 
 // Utenti in lurk per sessione: streamerId → Set<username>
-const lurkSessionUsers = new Map();
+const lurkSessionUsers    = new Map();
+const sessionActiveUsers  = new Map(); // streamerId → Map<username, lastTimestamp>
 
 // Twitch app token (per EventSub)
 let _appToken = null, _appTokenExp = 0, _botUserId = null;
@@ -316,11 +317,12 @@ async function getBotUserId() {
 async function preloadUserCache() {
   try {
     const { rows } = await pool.query(
-      `SELECT streamer_id, username, notes, message_count FROM bot_users WHERE notes IS NOT NULL`
+      `SELECT streamer_id, username, notes, nickname, message_count FROM bot_users WHERE notes IS NOT NULL OR nickname IS NOT NULL`
     );
     for (const row of rows) {
       userCache.set(`${row.streamer_id}:${row.username}`, {
         notes:        row.notes,
+        nickname:     row.nickname,
         messageCount: row.message_count,
       });
     }
@@ -341,6 +343,45 @@ async function generateUserNotes(streamerId, username, recentMessages, existingN
   const raw = await gemini(system, prompt, 256, 0);
   if (!raw || raw.trim().length < 5) return null;
   return raw.trim().slice(0, 200);
+}
+
+// ─── Parsing risposta AI (testo semplice o JSON con nickname) ─────────────────
+
+function parseAiResponse(raw) {
+  if (!raw) return { text: null, nickname: null };
+  let cleaned = raw.trim();
+  if (cleaned.startsWith('```')) {
+    cleaned = cleaned.replace(/^```(?:json)?\n?/, '').replace(/\n?```$/, '').trim();
+  }
+  if (cleaned.startsWith('{')) {
+    try {
+      const obj = JSON.parse(cleaned);
+      if (obj.text && typeof obj.text === 'string') {
+        return { text: obj.text.trim(), nickname: obj.nickname?.trim() || null };
+      }
+    } catch {}
+  }
+  return { text: cleaned, nickname: null };
+}
+
+// ─── Contesto utenti noti (per system prompt) ─────────────────────────────────
+
+function buildUserContext(streamerId) {
+  const activeMap = sessionActiveUsers.get(streamerId);
+  if (!activeMap) return null;
+  const sorted = [...activeMap.entries()].sort((a, b) => b[1] - a[1]);
+  const lines = [];
+  for (const [uname] of sorted) {
+    const cached = userCache.get(`${streamerId}:${uname}`);
+    if (!cached?.notes && !cached?.nickname) continue;
+    const parts = [];
+    if (cached.nickname) parts.push(`soprannome: "${cached.nickname}"`);
+    if (cached.notes)    parts.push(`note: "${cached.notes}"`);
+    lines.push(`- ${uname} | ${parts.join(' | ')}`);
+    if (lines.length >= 5) break;
+  }
+  if (lines.length === 0) return null;
+  return `Utenti noti in questo canale:\n${lines.join('\n')}`;
 }
 
 // ─── Categoria attiva ─────────────────────────────────────────────────────────
@@ -1285,21 +1326,24 @@ class BotManager {
       systemPrompt += `\n\n## SESSIONE ATTUALE\nIl canale sta trasmettendo in questo momento: ${currentGame}. Puoi fare riferimento al gioco se pertinente alle domande degli utenti.`;
     }
 
-    // ── Note utente (da cache) ───────────────────────────────────────────────
+    // ── Contesto utenti noti (max 5, ordinati per attività) ─────────────────
     const cacheKey = `${streamer.streamer_id}:${username}`;
-    const cachedUser = userCache.get(cacheKey) ?? null;
-    if (cachedUser?.notes) {
-      const manualMembers = parseJson(streamer.members, []);
-      const isManualMember = manualMembers.some(
-        m => (m.twitch_username || '').toLowerCase() === username
-      );
-      if (!isManualMember) {
-        systemPrompt += `\n\nConosci già questo utente — ${username}: ${cachedUser.notes}`;
-      }
+    const activeMap = sessionActiveUsers.get(streamer.streamer_id) ?? new Map();
+    activeMap.set(username, Date.now());
+    sessionActiveUsers.set(streamer.streamer_id, activeMap);
+
+    const userCtx = buildUserContext(streamer.streamer_id);
+    if (userCtx) {
+      systemPrompt += `\n\n${userCtx}`;
     }
 
+    // ── Istruzione rilevamento soprannome ────────────────────────────────────
+    systemPrompt += `\n\nSe il messaggio dell'utente contiene una dichiarazione esplicita di soprannome o nome preferito (es. "chiamami X", "il mio soprannome è X", "puoi chiamarmi X"), rispondi in JSON con questa struttura: {"text":"risposta naturale e conversazionale","nickname":"X"}. Altrimenti rispondi con solo il testo, senza JSON. Usa il soprannome noto dell'utente quando lo chiami per nome.`;
+
     const history = channelHistory.get(streamer.streamer_id) ?? [];
-    const reply = truncate(await gemini(systemPrompt, userMessage, 1024, 512, history));
+    const rawReply = await gemini(systemPrompt, userMessage, 1024, 512, history);
+    const { text: replyText, nickname: detectedNickname } = parseAiResponse(rawReply);
+    const reply = replyText ? truncate(replyText) : null;
     if (!reply) {
       console.warn(`[Bot] Nessuna risposta AI per @${username} in #${channel}`);
       try { await this.client.say(channel, `@${username} Ops, ho avuto un problema tecnico! Riprova tra poco. 🔧`); } catch {}
@@ -1327,11 +1371,19 @@ class BotManager {
          message_count = bot_users.message_count + 1,
          last_seen     = NOW(),
          updated_at    = NOW()
-       RETURNING message_count, notes`,
+       RETURNING message_count, notes, nickname`,
       [streamer.streamer_id, username]
     ).then(({ rows }) => {
-      const { message_count: count, notes } = rows[0];
-      userCache.set(cacheKey, { notes: notes ?? null, messageCount: count });
+      const { message_count: count, notes, nickname } = rows[0];
+      userCache.set(cacheKey, { notes: notes ?? null, nickname: nickname ?? null, messageCount: count });
+      if (detectedNickname && detectedNickname !== nickname) {
+        pool.query(
+          `UPDATE bot_users SET nickname=$1, updated_at=NOW() WHERE streamer_id=$2 AND username=$3`,
+          [detectedNickname, streamer.streamer_id, username]
+        ).then(() => {
+          userCache.set(cacheKey, { notes: notes ?? null, nickname: detectedNickname, messageCount: count });
+        }).catch(e => console.warn('[BotUsers] nickname save:', e.message));
+      }
       if (!userMessageBuffers.has(cacheKey)) userMessageBuffers.set(cacheKey, []);
       const buf = userMessageBuffers.get(cacheKey);
       buf.push(`${username}: ${question}`);
@@ -1345,7 +1397,7 @@ class BotManager {
               `UPDATE bot_users SET notes=$1, updated_at=NOW() WHERE streamer_id=$2 AND username=$3`,
               [newNotes, streamer.streamer_id, username]
             ).then(() => {
-              userCache.set(cacheKey, { notes: newNotes, messageCount: count });
+              userCache.set(cacheKey, { notes: newNotes, nickname: detectedNickname ?? nickname ?? null, messageCount: count });
               console.log(`[BotUsers] Note aggiornate per @${username} (${count} msg)`);
             });
           })
@@ -1622,6 +1674,7 @@ class BotManager {
       currentGames.set(streamer.streamer_id, null);
       channelHistory.delete(streamer.streamer_id);
       lurkSessionUsers.delete(streamer.streamer_id);
+      sessionActiveUsers.delete(streamer.streamer_id);
       console.log(`[Bot] Stream offline: #${streamer.twitch_username} — contatori sessione azzerati`);
       return;
     }

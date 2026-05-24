@@ -20,7 +20,7 @@ const PLANS = [
   {
     id: 'starter',
     name: 'Starter',
-    price: 9,
+    price: 12,
     features: [
       'Bot AI base con personalità configurabile',
       'Max 5 membri configurabili',
@@ -34,7 +34,7 @@ const PLANS = [
   {
     id: 'creator',
     name: 'Creator',
-    price: 19,
+    price: 24,
     features: [
       'Bot AI completamente personalizzato',
       'Membri illimitati',
@@ -51,7 +51,7 @@ const PLANS = [
   {
     id: 'elite',
     name: 'Elite',
-    price: 35,
+    price: 44,
     highlight: true,
     badge: 'Più popolare',
     features: [
@@ -67,7 +67,7 @@ const PLANS = [
   {
     id: 'signature',
     name: 'Signature',
-    price: 85,
+    price: 99,
     features: [
       'Tutto di Elite',
       'Onboarding 1:1 con gCernu',
