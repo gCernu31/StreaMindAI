@@ -18,7 +18,6 @@ export const PLAN_LIMITS = {
     members:             0,
     songRequest:         false,
     memory:              false,
-    discord:             false,
     analytics:           false,
     customEventMessages: false,
     trial:               false,
@@ -37,7 +36,6 @@ export const PLAN_LIMITS = {
     members:             10,
     songRequest:         false,
     memory:              false,
-    discord:             false,
     analytics:           false,
     customEventMessages: false,
     trial:               7, // giorni
@@ -61,7 +59,6 @@ export const PLAN_LIMITS = {
     members:             20,
     songRequest:         true,
     memory:              true,    // memoria base
-    discord:             true,
     analytics:           false,
     customEventMessages: false,
     trial:               7,
@@ -83,7 +80,6 @@ export const PLAN_LIMITS = {
     members:             30,
     songRequest:         true,
     memory:              true,    // avanzata con game_context
-    discord:             true,
     analytics:           true,
     customEventMessages: true,
     trial:               7,
@@ -105,7 +101,6 @@ export const PLAN_LIMITS = {
     members:             50,
     songRequest:         true,
     memory:              true,
-    discord:             true,
     analytics:           true,
     customEventMessages: true,
     trial:               false, // nessun trial — contatto diretto

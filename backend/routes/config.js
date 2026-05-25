@@ -24,7 +24,7 @@ configRoutes.get('/', requireAuth, async (req, res) => {
               ai_provider, event_messages,
               spotify_client_id, spotify_client_secret,
               spotify_access_token,
-              discord_bot_token, bot_active,
+              bot_active,
               last_name_change, name_changes_this_month,
               user_msg_nonsub, user_msg_subvip
        FROM bot_configs WHERE streamer_id = $1`,
@@ -38,14 +38,13 @@ configRoutes.get('/', requireAuth, async (req, res) => {
       bot_personality:    cfg.bot_personality ?? '',
       twitch_username:    cfg.twitch_username ?? req.user.twitch_username ?? '',
       stream_schedule:    tryParse(cfg.stream_schedule, { days: [], time_start: '21:00', time_end: '00:00' }),
-      social_links:       tryParse(cfg.social_links,    { linktree: '', instagram: '', youtube: '', discord: '' }),
+      social_links:       tryParse(cfg.social_links,    { linktree: '', instagram: '', youtube: '' }),
       custom_commands:    tryParse(cfg.custom_commands, []),
       members:            tryParse(cfg.members,          []),
       ai_provider:        cfg.ai_provider ?? 'gemini',
       event_messages:     tryParse(cfg.event_messages,  {}),
       spotify_client_id:  cfg.spotify_client_id ?? '',
       spotify_connected:  !!cfg.spotify_access_token,
-      discord_connected:  !!cfg.discord_bot_token,
       bot_active:                 cfg.bot_active                 ?? true,
       last_name_change:           cfg.last_name_change           ?? null,
       name_changes_this_month:    cfg.name_changes_this_month    ?? 0,
@@ -110,7 +109,6 @@ configRoutes.put('/', requireAuth, async (req, res) => {
     stream_schedule, social_links, custom_commands, members, ai_provider,
     event_messages,
     spotify_client_id, spotify_client_secret,
-    discord_bot_token,
     user_msg_nonsub, user_msg_subvip,
   } = req.body;
 
@@ -190,9 +188,8 @@ configRoutes.put('/', requireAuth, async (req, res) => {
            event_messages         = COALESCE($11::jsonb, event_messages),
            spotify_client_id      = COALESCE($12, spotify_client_id),
            spotify_client_secret  = COALESCE($13, spotify_client_secret),
-           discord_bot_token      = COALESCE($14, discord_bot_token),
-           user_msg_nonsub        = COALESCE($15, user_msg_nonsub),
-           user_msg_subvip        = COALESCE($16, user_msg_subvip),
+           user_msg_nonsub        = COALESCE($14, user_msg_nonsub),
+           user_msg_subvip        = COALESCE($15, user_msg_subvip),
            updated_at             = NOW()
        WHERE streamer_id = $10
        RETURNING *`,
@@ -210,7 +207,6 @@ configRoutes.put('/', requireAuth, async (req, res) => {
         event_messages         != null ? JSON.stringify(event_messages)     : null,
         spotify_client_id || null,
         spotify_client_secret ? encrypt(spotify_client_secret) : null,
-        discord_bot_token ? encrypt(discord_bot_token) : null,
         user_msg_nonsub        != null ? Number(user_msg_nonsub) : null,
         user_msg_subvip        != null ? Number(user_msg_subvip) : null,
       ]
@@ -240,14 +236,13 @@ configRoutes.put('/', requireAuth, async (req, res) => {
       bot_personality:  cfg.bot_personality,
       twitch_username:  cfg.twitch_username,
       stream_schedule:  tryParse(cfg.stream_schedule, { days: [], time_start: '21:00', time_end: '00:00' }),
-      social_links:     tryParse(cfg.social_links,    { linktree: '', instagram: '', youtube: '', discord: '' }),
+      social_links:     tryParse(cfg.social_links,    { linktree: '', instagram: '', youtube: '' }),
       custom_commands:  tryParse(cfg.custom_commands, []),
       members:          tryParse(cfg.members,          []),
       ai_provider:      cfg.ai_provider,
       event_messages:   tryParse(cfg.event_messages,  {}),
       spotify_client_id: cfg.spotify_client_id ?? '',
       spotify_connected: !!cfg.spotify_access_token,
-      discord_connected: !!cfg.discord_bot_token,
       user_msg_nonsub:  cfg.user_msg_nonsub ?? null,
       user_msg_subvip:  cfg.user_msg_subvip ?? null,
     });

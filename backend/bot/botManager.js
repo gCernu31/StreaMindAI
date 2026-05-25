@@ -21,7 +21,7 @@
  *   APP_URL                — URL pubblico per webhook EventSub
  *   EVENTSUB_SECRET        — segreto firma webhook
  *   GEMINI_API_KEY
- *   (Spotify/Discord: credenziali per-streamer salvate in bot_configs, non env vars)
+ *   (Spotify: credenziali per-streamer salvate in bot_configs, non env vars)
  */
 
 import tmi    from 'tmi.js';
@@ -907,7 +907,6 @@ async function loadActiveStreamers() {
       bc.spotify_access_token,
       bc.spotify_refresh_token,
       bc.spotify_token_expires_at,
-      bc.discord_bot_token,
       bc.bot_name,
       bc.creator_name,
       bc.bot_personality,
@@ -932,7 +931,6 @@ async function loadActiveStreamers() {
     spotify_client_secret: decrypt(r.spotify_client_secret),
     spotify_access_token:  decrypt(r.spotify_access_token),
     spotify_refresh_token: decrypt(r.spotify_refresh_token),
-    discord_bot_token:     decrypt(r.discord_bot_token),
   }));
 }
 

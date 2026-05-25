@@ -32,7 +32,7 @@ export default function GuidePage() {
             Inserisci i giorni e gli orari in cui stai solitamente in live. La tua AI li conosce e può rispondere correttamente se qualcuno chiede quando sei online.
           </Field>
           <Field label="Link social">
-            Aggiungi i tuoi link (Linktree, Instagram, YouTube, Discord). La tua AI li condivide automaticamente quando qualcuno li chiede in chat.
+            Aggiungi i tuoi link (Linktree, Instagram, YouTube). La tua AI li condivide automaticamente quando qualcuno li chiede in chat.
           </Field>
         </div>
       </Section>
@@ -61,11 +61,11 @@ export default function GuidePage() {
           Puoi creare comandi rapidi che la tua AI esegue in chat. Ogni comando ha:
         </p>
         <ul className="space-y-2 mb-4">
-          <BulletItem><Strong>Trigger</Strong> — la parola che lo attiva (es. !social, !discord, !orari)</BulletItem>
+          <BulletItem><Strong>Trigger</Strong> — la parola che lo attiva (es. !social, !orari, !spotify)</BulletItem>
           <BulletItem><Strong>Risposta</Strong> — quello che la tua AI risponde</BulletItem>
         </ul>
         <Callout>
-          Esempio: trigger "!discord" → risposta "Entra nel nostro Discord: discord.gg/tuolink"
+          Esempio: trigger "!social" → risposta "Seguimi su Instagram: instagram.com/tuohandle"
         </Callout>
       </Section>
 

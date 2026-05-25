@@ -31,7 +31,6 @@ const months = [
       { emoji: '🤖', text: 'Bot AI personalizzabile con nome, personalità e membri' },
       { emoji: '🎵', text: 'Song request Spotify integrato' },
       { emoji: '💾', text: 'Sistema memoria — il bot impara dalla chat' },
-      { emoji: '💬', text: 'Integrazione Discord per notifiche live' },
       { emoji: '📊', text: 'Analisi canale gratuita con piano editoriale' },
       { emoji: '🎮', text: 'Supporto eventi Twitch: follow, sub, gift, bit, hype train, raid' },
       { emoji: '🎯', text: 'Shoutout automatico durante i raid' },

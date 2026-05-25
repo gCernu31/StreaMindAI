@@ -26,7 +26,7 @@ const NUM_FIELDS = [
 const TEXT_FIELDS = [
   { key: 'main_games',      label: 'Giochi principali', placeholder: 'Es. Valorant, Minecraft, GTA V' },
   { key: 'stream_schedule', label: 'Orari delle live',  placeholder: 'Es. Venerdì e Sabato dalle 21:00' },
-  { key: 'social_links',    label: 'Social / Link',     placeholder: 'Es. Instagram @gcernu, Discord discord.gg/gcernu' },
+  { key: 'social_links',    label: 'Social / Link',     placeholder: 'Es. Instagram @gcernu, YouTube youtube.com/@gcernu' },
 ];
 
 const MAX_NUM     = 9_999_999;

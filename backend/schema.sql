@@ -116,16 +116,6 @@ BEGIN
   IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='bot_configs' AND column_name='event_messages') THEN
     ALTER TABLE bot_configs ADD COLUMN event_messages JSONB NOT NULL DEFAULT '{}';
   END IF;
-  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='bot_configs' AND column_name='discord_announce_channel') THEN
-    ALTER TABLE bot_configs ADD COLUMN discord_announce_channel VARCHAR(100);
-  END IF;
-  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='bot_configs' AND column_name='discord_livestream_channel') THEN
-    ALTER TABLE bot_configs ADD COLUMN discord_livestream_channel VARCHAR(100);
-  END IF;
-  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='bot_configs' AND column_name='discord_video_channel') THEN
-    ALTER TABLE bot_configs ADD COLUMN discord_video_channel VARCHAR(100);
-  END IF;
-
   -- bot_active: abilita/disabilita il bot manualmente
   IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='bot_configs' AND column_name='bot_active') THEN
     ALTER TABLE bot_configs ADD COLUMN bot_active BOOLEAN NOT NULL DEFAULT TRUE;
@@ -180,7 +170,7 @@ BEGIN
 END;
 $$;
 
--- Aggiunge colonne Spotify e Discord su bot_configs (per-streamer, idempotente)
+-- Aggiunge colonne Spotify su bot_configs (per-streamer, idempotente)
 DO $$
 BEGIN
   IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='bot_configs' AND column_name='spotify_client_id') THEN
@@ -197,9 +187,6 @@ BEGIN
   END IF;
   IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='bot_configs' AND column_name='spotify_token_expires_at') THEN
     ALTER TABLE bot_configs ADD COLUMN spotify_token_expires_at BIGINT;
-  END IF;
-  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='bot_configs' AND column_name='discord_bot_token') THEN
-    ALTER TABLE bot_configs ADD COLUMN discord_bot_token TEXT;
   END IF;
 END;
 $$;
@@ -448,3 +435,9 @@ BEGIN
   END IF;
 END;
 $$;
+
+-- Rimozione colonne Discord da bot_configs (feature rimossa)
+ALTER TABLE bot_configs DROP COLUMN IF EXISTS discord_bot_token;
+ALTER TABLE bot_configs DROP COLUMN IF EXISTS discord_announce_channel;
+ALTER TABLE bot_configs DROP COLUMN IF EXISTS discord_livestream_channel;
+ALTER TABLE bot_configs DROP COLUMN IF EXISTS discord_video_channel;

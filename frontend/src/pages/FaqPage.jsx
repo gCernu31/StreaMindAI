@@ -34,10 +34,6 @@ const FAQS = [
     a: 'Sì, puoi chiamare il tuo chatbot AI come vuoi — Luna, Max, Aria o qualsiasi nome che si adatti alla tua personalità e al tuo brand su Twitch.',
   },
   {
-    q: 'StreaMindAI funziona anche con Discord?',
-    a: 'Sì, nei piani Creator, Elite e Signature StreaMindAI si integra con il tuo server Discord e invia notifiche automatiche quando vai in live o pubblichi un video.',
-  },
-  {
     q: 'Cosa succede alla scadenza del trial gratuito?',
     a: 'Alla scadenza dei 7 giorni di prova, l\'abbonamento si attiva automaticamente con la carta inserita. Puoi cancellare in qualsiasi momento prima della scadenza senza alcun addebito.',
   },
@@ -119,10 +115,10 @@ export default function FaqPage({ user, loading, onLogout }) {
 
       <Helmet>
         <title>FAQ — Domande Frequenti sul Bot AI per Twitch | StreaMindAI</title>
-        <meta name="description" content="Tutte le risposte sul bot AI per Twitch di StreaMindAI. Come funziona, prezzi, integrazione Spotify e Discord, personalizzazione e molto altro." />
+        <meta name="description" content="Tutte le risposte sul bot AI per Twitch di StreaMindAI. Come funziona, prezzi, integrazione Spotify, personalizzazione e molto altro." />
         <link rel="canonical" href="https://streamindai.com/faq" />
         <meta property="og:title" content="FAQ — Domande Frequenti | StreaMindAI" />
-        <meta property="og:description" content="Tutte le risposte sul bot AI per Twitch di StreaMindAI. Come funziona, prezzi, Spotify, Discord e personalizzazione." />
+        <meta property="og:description" content="Tutte le risposte sul bot AI per Twitch di StreaMindAI. Come funziona, prezzi, Spotify e personalizzazione." />
         <meta property="og:url" content="https://streamindai.com/faq" />
         <script type="application/ld+json">{JSON.stringify(FAQ_JSON_LD)}</script>
       </Helmet>

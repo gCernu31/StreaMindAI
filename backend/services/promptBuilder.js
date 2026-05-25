@@ -87,7 +87,7 @@ export async function generateBotPrompt(streamerId, { forceRefresh = false } = {
 
   // Campi JSON (TEXT o JSONB)
   const schedule = tryParse(cfg.stream_schedule, { days: [], time_start: '', time_end: '' });
-  const social   = tryParse(cfg.social_links,    { linktree: '', instagram: '', youtube: '', discord: '' });
+  const social   = tryParse(cfg.social_links,    { linktree: '', instagram: '', youtube: '' });
   const chars    = tryParse(cfg.members,          []);
   const cmds     = tryParse(cfg.custom_commands, []).filter(c => c.active !== false);
 
@@ -140,7 +140,6 @@ export async function generateBotPrompt(streamerId, { forceRefresh = false } = {
   if (social.linktree)  socialLines.push(`Link principale: ${social.linktree}`);
   if (social.instagram) socialLines.push(`Instagram: ${social.instagram}`);
   if (social.youtube)   socialLines.push(`YouTube: ${social.youtube}`);
-  if (social.discord)   socialLines.push(`Discord: ${social.discord}`);
   if (socialLines.length) {
     channelLines.push(`Social:\n${socialLines.map(l => `  • ${l}`).join('\n')}`);
   }

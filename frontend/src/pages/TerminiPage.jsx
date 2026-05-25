@@ -9,7 +9,7 @@ Utilizzando StreaMindAI accetti integralmente questi Termini di Servizio. Se non
 
 ## 2. Descrizione del Servizio
 
-StreaMindAI è una piattaforma SaaS che permette agli streamer Twitch di creare e gestire bot AI personalizzati per la propria chat, con funzionalità di risposta automatica, song request Spotify, integrazione Discord e gestione eventi.
+StreaMindAI è una piattaforma SaaS che permette agli streamer Twitch di creare e gestire bot AI personalizzati per la propria chat, con funzionalità di risposta automatica, song request Spotify e gestione eventi.
 
 ## 3. Registrazione e Account
 
@@ -49,7 +49,7 @@ StreaMindAI è una piattaforma SaaS che permette agli streamer Twitch di creare 
 ## 7. Limitazione di Responsabilità
 
 StreaMindAI non è responsabile per:
-- Interruzioni del servizio Twitch, Spotify, Discord o altri servizi terzi
+- Interruzioni del servizio Twitch, Spotify o altri servizi terzi
 - Contenuti generati dall'AI che potrebbero essere imprecisi, inappropriati o non pertinenti
 - Danni indiretti, consequenziali o perdita di profitti derivanti dall'uso del servizio
 - Violazioni delle linee guida Twitch causate da configurazioni errate del bot da parte dell'utente

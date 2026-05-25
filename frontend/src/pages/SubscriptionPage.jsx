@@ -41,7 +41,6 @@ const PLANS = [
       'Song request Spotify (!sr)',
       'Memoria base (apprendimento automatico)',
       'Tutti gli eventi automatici (follow, sub, gift, bit, hype train, raid)',
-      'Discord: notifiche live e video',
       'Comandi custom configurabili',
       'Max 600 messaggi/sera sul canale',
       '12.000 messaggi/mese',
