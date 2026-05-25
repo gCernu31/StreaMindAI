@@ -18,7 +18,7 @@ usersRoutes.get('/', requireAuth, async (req, res) => {
         [req.user.streamer_id]
       ),
       pool.query(
-        `SELECT id, username, message_count, last_seen, notes, is_manual, created_at
+        `SELECT id, username, nickname, message_count, last_seen, notes, is_manual, created_at
          FROM bot_users
          WHERE streamer_id = $1
          ORDER BY message_count DESC, last_seen DESC

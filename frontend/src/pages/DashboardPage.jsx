@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { getToken } from '../utils/auth.js';
 import { useBotStatus } from '../contexts/BotStatusCtx.jsx';
@@ -44,17 +44,22 @@ const MONTHLY_LIMITS = {
 
 const DAY_LABELS = ['Dom', 'Lun', 'Mar', 'Mer', 'Gio', 'Ven', 'Sab'];
 
-function buildChartData(apiRows) {
+function buildChartData(apiRows, days = 7) {
   // Normalizza le chiavi: il bot scrive date UTC (toISOString), dobbiamo usare UTC anche qui
   const map = {};
   apiRows.forEach(r => { map[String(r.date).slice(0, 10)] = r.count; });
 
   const now = new Date();
-  return Array.from({ length: 7 }, (_, i) => {
+  return Array.from({ length: days }, (_, i) => {
     const d = new Date(now);
-    d.setUTCDate(d.getUTCDate() - (6 - i)); // UTC ovunque → coerente con dateStr() del bot
-    const iso = d.toISOString().slice(0, 10);
-    return { day: DAY_LABELS[d.getUTCDay()], count: map[iso] ?? 0, today: i === 6 };
+    d.setUTCDate(d.getUTCDate() - (days - 1 - i));
+    const iso     = d.toISOString().slice(0, 10);
+    const isToday = i === days - 1;
+    // Per 7 giorni: etichetta giorno abbreviato; per 30: D/M ogni 5 o oggi
+    const dayLabel = days <= 7
+      ? DAY_LABELS[d.getUTCDay()]
+      : (i % 5 === 0 || isToday ? `${d.getUTCDate()}/${d.getUTCMonth() + 1}` : '');
+    return { day: dayLabel, count: map[iso] ?? 0, today: isToday };
   });
 }
 
@@ -393,7 +398,7 @@ function SubscriptionCard({ status, plan, daysRemaining, totalDays, expiresAt, m
 // Grafico utilizzi (SVG area chart)
 // ---------------------------------------------------------------------------
 
-function UsageChart({ data }) {
+function UsageChart({ data, days = 7, onDaysChange }) {
   const W = 500, H = 150;
   const pL = 36, pR = 12, pT = 14, pB = 28;
   const cW = W - pL - pR;
@@ -429,15 +434,23 @@ function UsageChart({ data }) {
     <div>
       <div className="flex items-center justify-between mb-4">
         <div>
-          <h2 className="text-sm font-semibold text-hally-text">Utilizzi ultimi 7 giorni</h2>
+          <h2 className="text-sm font-semibold text-hally-text">Utilizzi ultimi {days} giorni</h2>
           <p className="text-xs text-hally-text-muted mt-0.5">{total} comandi totali</p>
         </div>
-        <span
-          className="text-xs font-semibold px-2.5 py-1 rounded-full"
-          style={{ backgroundColor: 'rgba(139,92,246,0.1)', color: '#8B5CF6', border: '1px solid rgba(139,92,246,0.2)' }}
-        >
-          7 giorni
-        </span>
+        <div className="flex gap-1">
+          {[7, 30].map(d => (
+            <button
+              key={d}
+              onClick={() => onDaysChange(d)}
+              className="text-xs font-semibold px-2.5 py-1 rounded-full transition-colors"
+              style={days === d
+                ? { backgroundColor: 'rgba(139,92,246,0.15)', color: '#8B5CF6', border: '1px solid rgba(139,92,246,0.35)' }
+                : { backgroundColor: 'transparent', color: '#6b6b6b', border: '1px solid #2a2a2a' }}
+            >
+              {d}gg
+            </button>
+          ))}
+        </div>
       </div>
 
       <svg viewBox={`0 0 ${W} ${H}`} className="w-full h-auto">
@@ -822,6 +835,9 @@ export default function DashboardPage({ user }) {
   const [subStatus, setSubStatus] = useState(null);
   const [referral, setReferral]   = useState(null);
   const [extraTokens, setExtraTokens] = useState(null); // { count, expiry } | null
+  const [chartDays, setChartDays]     = useState(7);
+  const [chartUsage, setChartUsage]   = useState([]);
+  const chartDaysSkipRef              = useRef(true);
 
   useEffect(() => {
     const token = getToken();
@@ -830,7 +846,7 @@ export default function DashboardPage({ user }) {
 
     fetch('/api/dashboard/stats', { headers: h })
       .then(r => r.ok ? r.json() : null)
-      .then(data => { if (data) setStats(data); })
+      .then(data => { if (data) { setStats(data); setChartUsage(data.usage_last_7_days ?? []); } })
       .catch(() => {});
 
     fetch('/api/config', { headers: h })
@@ -864,8 +880,18 @@ export default function DashboardPage({ user }) {
       .catch(() => {});
   }, []);
 
+  useEffect(() => {
+    if (chartDaysSkipRef.current) { chartDaysSkipRef.current = false; return; }
+    const token = getToken();
+    if (!token) return;
+    fetch(`/api/dashboard/stats?days=${chartDays}`, { headers: { Authorization: `Bearer ${token}` } })
+      .then(r => r.ok ? r.json() : null)
+      .then(data => { if (data) setChartUsage(data.usage_last_7_days ?? []); })
+      .catch(() => {});
+  }, [chartDays]);
+
   const sub = stats?.subscription ?? {};
-  const chartData = buildChartData(stats?.usage_last_7_days ?? []);
+  const chartData = buildChartData(chartUsage, chartDays);
 
   return (
     <div className="space-y-5">
@@ -965,7 +991,7 @@ export default function DashboardPage({ user }) {
       {/* ── Grafico + Feed memorie ──────────────────────────────────── */}
       <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-5">
         <div className="card overflow-x-auto">
-          <UsageChart data={chartData} />
+          <UsageChart data={chartData} days={chartDays} onDaysChange={setChartDays} />
         </div>
         <div className="card overflow-x-auto">
           <MemoryFeed memories={memories} />

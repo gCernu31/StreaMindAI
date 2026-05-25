@@ -65,6 +65,7 @@ export default function SuccessPage({ user }) {
   const [searchParams] = useSearchParams();
   const [visible, setVisible] = useState(false);
   const plan = searchParams.get('plan') ?? '';
+  const period = searchParams.get('period') ?? '1m';
   const planLabel = PLAN_LABELS[plan] ?? null;
 
   useEffect(() => {
@@ -106,7 +107,12 @@ export default function SuccessPage({ user }) {
           Benvenuto su StreaMindAI!
         </h1>
         <p className="text-center text-lg mb-2" style={{ color: '#a0a0a0' }}>
-          Il tuo abbonamento è attivo. Hai <strong style={{ color: '#f0f0f0' }}>7 giorni di prova gratuita</strong> — nessun addebito oggi.
+          {plan === 'signature'
+            ? <>Il tuo piano <strong style={{ color: '#f0f0f0' }}>Signature</strong> è attivo — benvenuto!</>
+            : period !== '1m'
+              ? <>Il tuo abbonamento è attivo — <strong style={{ color: '#f0f0f0' }}>inizia subito!</strong></>
+              : <>Il tuo abbonamento è attivo. Hai <strong style={{ color: '#f0f0f0' }}>7 giorni di prova gratuita</strong> — nessun addebito oggi.</>
+          }
         </p>
 
         {/* Piano attivato */}

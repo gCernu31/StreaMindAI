@@ -23,7 +23,7 @@ export const PLAN_LIMITS = {
     customEventMessages: false,
     trial:               false,
 
-    events: ['follow', 'subscribe', 'gift_sub', 'cheer', 'raid'],
+    events: ['follow', 'subscribe', 'gift_sub', 'cheer', 'raid', 'hype_train'],
 
     userLimits: null,
   },

@@ -50,10 +50,12 @@ export const dashboardRoutes = Router();
 // Handler riutilizzabile — esportato per il mount su /api/stats in server.js
 export async function statsHandler(req, res) {
   try {
-    const sid   = req.user.streamer_id;
-    const today = new Date().toISOString().slice(0, 10);
-    const yest  = new Date(Date.now() - 86_400_000).toISOString().slice(0, 10);
-    const week  = new Date(Date.now() - 7 * 86_400_000).toISOString().slice(0, 10);
+    const sid      = req.user.streamer_id;
+    const chartDays = Math.min(30, Math.max(7, parseInt(req.query.days) || 7));
+    const today    = new Date().toISOString().slice(0, 10);
+    const yest     = new Date(Date.now() - 86_400_000).toISOString().slice(0, 10);
+    const week     = new Date(Date.now() - 7 * 86_400_000).toISOString().slice(0, 10);
+    const chartStart = new Date(Date.now() - chartDays * 86_400_000).toISOString().slice(0, 10);
 
     const [
       todayRes,
@@ -61,7 +63,7 @@ export async function statsHandler(req, res) {
       memTotalRes,
       memWeekRes,
       subRes,
-      usageWeekRes,
+      usageChartRes,
     ] = await Promise.all([
       // Messaggi oggi
       pool.query(
@@ -92,13 +94,13 @@ export async function statsHandler(req, res) {
          FROM streamers WHERE id = $1`,
         [sid]
       ),
-      // Utilizzo ultimi 7 giorni (per grafico) — cast a text garantisce formato YYYY-MM-DD
+      // Utilizzo grafico (7 o 30 giorni) — cast a text garantisce formato YYYY-MM-DD
       pool.query(
         `SELECT usage_date::text, SUM(count) AS n
          FROM bot_daily_usage
          WHERE streamer_id = $1 AND usage_date >= $2
          GROUP BY usage_date ORDER BY usage_date ASC`,
-        [sid, week]
+        [sid, chartStart]
       ),
     ]);
 
@@ -133,7 +135,8 @@ export async function statsHandler(req, res) {
         days_remaining: daysRemaining,
         total_days:     totalDays,
       },
-      usage_last_7_days: usageWeekRes.rows.map(r => ({
+      chart_days:        chartDays,
+      usage_last_7_days: usageChartRes.rows.map(r => ({
         date:  r.usage_date,
         count: parseInt(r.n),
       })),

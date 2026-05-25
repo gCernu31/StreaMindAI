@@ -265,12 +265,12 @@ async function gemini(system, user, maxTokens = 1024, thinkingBudget = 512, hist
     return null;
   };
 
-  // Timeout globale 20s sull'intera catena
+  // Timeout globale 35s sull'intera catena
   const _timeout = new Promise(resolve =>
     setTimeout(() => {
-      console.error('[Bot] AI chain timeout (20s) — nessun provider AI ha risposto in tempo');
+      console.error('[Bot] AI chain timeout (35s) — nessun provider AI ha risposto in tempo');
       resolve(null);
-    }, 20_000)
+    }, 35_000)
   );
 
   return Promise.race([_chain(), _timeout]);
