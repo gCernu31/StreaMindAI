@@ -67,6 +67,13 @@ const IconSubscription = () => (
   </svg>
 );
 
+const IconCommands = () => (
+  <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4 shrink-0">
+    <path d="M2 4h12M2 8h8M2 12h5"/>
+    <path d="M12 10l2 2-2 2"/>
+  </svg>
+);
+
 const IconAnalysis = () => (
   <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4 shrink-0">
     <path d="M1.5 12.5L5 8l3 2.5 3.5-5L14.5 8"/>
@@ -115,6 +122,7 @@ function BrainWaveLogo({ className = 'w-6 h-6' }) {
 const navItems = [
   { to: '/dashboard',    Icon: IconDashboard,    label: 'Dashboard' },
   { to: '/config',       Icon: IconBot,          label: 'Il Mio Bot' },
+  { to: '/commands',     Icon: IconCommands,     label: 'Comandi' },
   { to: '/memory',       Icon: IconMemory,       label: 'Memoria' },
   { to: '/subscription', Icon: IconSubscription, label: 'Abbonamento' },
 ];

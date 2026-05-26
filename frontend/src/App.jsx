@@ -27,6 +27,7 @@ const ContattiPage         = lazy(() => import('./pages/ContattiPage.jsx'));
 const RefPage              = lazy(() => import('./pages/RefPage.jsx'));
 const StatusPage           = lazy(() => import('./pages/StatusPage.jsx'));
 const SuccessPage          = lazy(() => import('./pages/SuccessPage.jsx'));
+const CommandsPage         = lazy(() => import('./pages/CommandsPage.jsx'));
 
 function ScrollToTop() {
   const { pathname } = useLocation();
@@ -102,6 +103,7 @@ export default function App() {
           <Route path="/analisi"     element={<ProtectedRoute user={auth.user} loading={auth.loading}><Layout user={auth.user} onLogout={auth.logout}><DashboardAnalisiPage user={auth.user} /></Layout></ProtectedRoute>} />
           <Route path="/dashboard"   element={<ProtectedRoute user={auth.user} loading={auth.loading}><Layout user={auth.user} onLogout={auth.logout}><DashboardPage user={auth.user} /></Layout></ProtectedRoute>} />
           <Route path="/config"      element={<ProtectedRoute user={auth.user} loading={auth.loading}><Layout user={auth.user} onLogout={auth.logout}><ConfigPage /></Layout></ProtectedRoute>} />
+          <Route path="/commands"    element={<ProtectedRoute user={auth.user} loading={auth.loading}><Layout user={auth.user} onLogout={auth.logout}><CommandsPage /></Layout></ProtectedRoute>} />
           <Route path="/memory"      element={<ProtectedRoute user={auth.user} loading={auth.loading}><Layout user={auth.user} onLogout={auth.logout}><MemoryPage /></Layout></ProtectedRoute>} />
           <Route path="/subscription"element={<ProtectedRoute user={auth.user} loading={auth.loading}><Layout user={auth.user} onLogout={auth.logout}><SubscriptionPage /></Layout></ProtectedRoute>} />
           <Route path="/guide"       element={<ProtectedRoute user={auth.user} loading={auth.loading}><Layout user={auth.user} onLogout={auth.logout}><GuidePage /></Layout></ProtectedRoute>} />

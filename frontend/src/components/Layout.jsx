@@ -33,6 +33,7 @@ import { useBotStatus } from '../contexts/BotStatusCtx.jsx';
 const PAGE_TITLES = {
   '/dashboard':    'Dashboard',
   '/config':       'Il Mio Bot',
+  '/commands':     'Comandi',
   '/memory':       'Memoria',
   '/subscription': 'Abbonamento',
   '/analisi':      'La mia analisi',

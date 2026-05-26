@@ -20,6 +20,7 @@ import { spotifyRoutes }    from './routes/spotify.js';
 import { referralRoutes }  from './routes/referral.js';
 import { statusRoutes }    from './routes/status.js';
 import { usersRoutes }    from './routes/users.js';
+import { commandsRoutes } from './routes/commands.js';
 import { botManager, verifyEventSubSignature } from './bot/botManager.js';
 
 dotenv.config();
@@ -166,6 +167,7 @@ app.use('/api/subscription', subscriptionRoutes);
 app.use('/api/referral',    referralRoutes);
 app.use('/api/status',      statusRoutes);
 app.use('/api/users',       usersRoutes);
+app.use('/api/commands',   commandsRoutes);
 
 // ── React Router catch-all (produzione) ──────────────────────────────────────
 // DEVE stare dopo tutte le route API

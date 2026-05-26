@@ -97,6 +97,70 @@ CREATE TABLE IF NOT EXISTS analytics_leads (
 CREATE INDEX IF NOT EXISTS idx_analytics_leads_email
   ON analytics_leads (email);
 
+-- ============================================================
+-- Sistema Comandi Completo
+-- ============================================================
+
+CREATE TABLE IF NOT EXISTS bot_commands (
+  id               SERIAL PRIMARY KEY,
+  streamer_id      INTEGER NOT NULL REFERENCES streamers(id) ON DELETE CASCADE,
+  trigger          VARCHAR(100) NOT NULL,
+  response         TEXT NOT NULL,
+  active           BOOLEAN NOT NULL DEFAULT TRUE,
+  cooldown_seconds INTEGER NOT NULL DEFAULT 5,
+  mod_only         BOOLEAN NOT NULL DEFAULT FALSE,
+  created_at       TIMESTAMP NOT NULL DEFAULT NOW(),
+  updated_at       TIMESTAMP NOT NULL DEFAULT NOW(),
+  UNIQUE (streamer_id, trigger)
+);
+
+CREATE TABLE IF NOT EXISTS bot_command_templates (
+  id               SERIAL PRIMARY KEY,
+  streamer_id      INTEGER NOT NULL REFERENCES streamers(id) ON DELETE CASCADE,
+  name             VARCHAR(100) NOT NULL,
+  enabled          BOOLEAN NOT NULL DEFAULT TRUE,
+  cooldown_seconds INTEGER NOT NULL DEFAULT 30,
+  UNIQUE (streamer_id, name)
+);
+
+CREATE TABLE IF NOT EXISTS bot_announcements (
+  id               SERIAL PRIMARY KEY,
+  streamer_id      INTEGER NOT NULL REFERENCES streamers(id) ON DELETE CASCADE,
+  message          TEXT NOT NULL,
+  interval_minutes INTEGER NOT NULL DEFAULT 30,
+  active           BOOLEAN NOT NULL DEFAULT TRUE,
+  created_at       TIMESTAMP NOT NULL DEFAULT NOW(),
+  updated_at       TIMESTAMP NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS bot_counters (
+  id          SERIAL PRIMARY KEY,
+  streamer_id INTEGER NOT NULL REFERENCES streamers(id) ON DELETE CASCADE,
+  name        VARCHAR(100) NOT NULL,
+  trigger     VARCHAR(100) NOT NULL,
+  value       INTEGER NOT NULL DEFAULT 0,
+  active      BOOLEAN NOT NULL DEFAULT TRUE,
+  created_at  TIMESTAMP NOT NULL DEFAULT NOW(),
+  UNIQUE (streamer_id, trigger)
+);
+
+CREATE TABLE IF NOT EXISTS bot_emote_descriptions (
+  id          SERIAL PRIMARY KEY,
+  streamer_id INTEGER NOT NULL REFERENCES streamers(id) ON DELETE CASCADE,
+  emote_name  VARCHAR(100) NOT NULL,
+  description TEXT NOT NULL,
+  UNIQUE (streamer_id, emote_name)
+);
+
+CREATE INDEX IF NOT EXISTS idx_bot_commands_streamer
+  ON bot_commands (streamer_id);
+
+CREATE INDEX IF NOT EXISTS idx_bot_announcements_streamer
+  ON bot_announcements (streamer_id);
+
+CREATE INDEX IF NOT EXISTS idx_bot_counters_streamer
+  ON bot_counters (streamer_id);
+
 -- Rinomina characters → members (idempotente per DB esistenti)
 DO $$
 BEGIN

@@ -68,6 +68,18 @@ const eventCooldowns = new Map();
 // Categoria/gioco attivo per canale: streamerId → string|null
 const currentGames = new Map();
 
+// Inizio live per uptime: streamerId → Date
+const currentStreamStartedAt = new Map();
+
+// Cooldown comandi DB/template: key → timestamp
+const _cmdCooldowns = new Map();
+
+// Timer annunci periodici: streamerId → [timerId, ...]
+const _announcementTimers = new Map();
+
+// Cache descrizioni emote: streamerId → [{emote_name, description}]
+const _emoteCache = new Map();
+
 // Cronologia scambi AI per canale: streamerId → [{role,content}] (max 10 = 5 scambi)
 const channelHistory = new Map();
 
@@ -916,7 +928,9 @@ async function loadActiveStreamers() {
       bc.user_msg_subvip,
       bc.song_req_nonsub,
       bc.song_req_subvip,
-      bc.event_messages
+      bc.event_messages,
+      bc.social_links,
+      bc.stream_schedule
     FROM streamers s
     JOIN bot_configs bc ON bc.streamer_id = s.id
     WHERE s.twitch_username IS NOT NULL
@@ -1003,6 +1017,7 @@ class BotManager {
       if (!songQueues.has(s.streamer_id)) {
         songQueues.set(s.streamer_id, { enabled: true, songs: [], srCounts: new Map() });
       }
+      this._loadEmotes(s.streamer_id).catch(() => {});
     });
 
     const channels = streamers.map(s => s.twitch_username.toLowerCase());
@@ -1154,6 +1169,7 @@ class BotManager {
                 console.warn(`[Category] sync @${ch}:`, e.message)
               );
             }
+            this._loadEmotes(s.streamer_id).catch(() => {});
           } catch (e) {
             console.warn(`[Bot] Join #${ch}:`, e.message);
           }
@@ -1282,24 +1298,244 @@ class BotManager {
     // 1. Comandi personalizzati statici
     if (await this._handleCustomCommand(channel, streamer, msg)) return;
 
-    // 2. Song request
     const lowerMsg = msg.toLowerCase();
+
+    // 2. Comandi DB personalizzati
+    if (await this._handleDbCommand(channel, tags, streamer, lowerMsg)) return;
+
+    // 3. Template comandi predefiniti
+    if (await this._handleTemplateCommand(channel, tags, streamer, lowerMsg)) return;
+
+    // 4. Contatori
+    if (await this._handleCounterCommand(channel, tags, streamer, lowerMsg)) return;
+
+    // 5. Song request
     if (lowerMsg.startsWith('!sr ') || lowerMsg === '!sr on' || lowerMsg === '!sr off') {
       await this._handleSongRequest(channel, tags, streamer, msg, username, isSub);
       return;
     }
 
-    // 3. Lurk
+    // 6. Lurk
     if (lowerMsg === '!lurk') {
       await this._handleLurk(channel, streamer, username);
       return;
     }
 
-    // 4. Comando AI principale: !<nome_bot>
+    // 7. Comando AI principale: !<nome_bot>
     const botCmd = '!' + (streamer.bot_name || 'streambot').toLowerCase().replace(/\s+/g, '');
     if (!lowerMsg.startsWith(botCmd)) return;
 
     await this._handleBotCommand(channel, tags, streamer, msg, username, isSub, botCmd);
+  }
+
+  // ── Carica emote in cache ─────────────────────────────────────────────────
+  async _loadEmotes(streamerId) {
+    try {
+      const { rows } = await pool.query(
+        'SELECT emote_name, description FROM bot_emote_descriptions WHERE streamer_id = $1',
+        [streamerId]
+      );
+      _emoteCache.set(streamerId, rows);
+    } catch (e) {
+      console.warn('[Emotes] _loadEmotes:', e.message);
+    }
+  }
+
+  // ── Avvia annunci periodici ───────────────────────────────────────────────
+  async _startAnnouncements(streamerId) {
+    this._stopAnnouncements(streamerId);
+    try {
+      const { rows } = await pool.query(
+        'SELECT id, message, interval_minutes FROM bot_announcements WHERE streamer_id = $1 AND active = TRUE',
+        [streamerId]
+      );
+      if (rows.length === 0) return;
+      const streamer = Object.values(this.channelMap).find(s => s.streamer_id === streamerId);
+      if (!streamer) return;
+      const channel = '#' + streamer.twitch_username.toLowerCase();
+      const timers  = rows.map(ann => {
+        const ms = ann.interval_minutes * 60_000;
+        return setInterval(async () => {
+          if (!this.connected) return;
+          try { await this.client.say(channel, ann.message); } catch {}
+        }, ms);
+      });
+      _announcementTimers.set(streamerId, timers);
+      console.log(`[Announcements] Avviati ${timers.length} timer per streamer_id=${streamerId}`);
+    } catch (e) {
+      console.warn('[Announcements] _startAnnouncements:', e.message);
+    }
+  }
+
+  // ── Ferma annunci periodici ───────────────────────────────────────────────
+  _stopAnnouncements(streamerId) {
+    const timers = _announcementTimers.get(streamerId);
+    if (timers) {
+      for (const t of timers) clearInterval(t);
+      _announcementTimers.delete(streamerId);
+      console.log(`[Announcements] Fermati timer per streamer_id=${streamerId}`);
+    }
+  }
+
+  // ── Comandi DB personalizzati ─────────────────────────────────────────────
+  async _handleDbCommand(channel, tags, streamer, lowerMsg) {
+    const streamerId = streamer.streamer_id;
+    const { rows } = await pool.query(
+      'SELECT id, trigger, response, cooldown_seconds, mod_only FROM bot_commands WHERE streamer_id = $1 AND active = TRUE',
+      [streamerId]
+    );
+    for (const cmd of rows) {
+      const t = cmd.trigger.trim().toLowerCase();
+      if (lowerMsg !== t && !lowerMsg.startsWith(t + ' ')) continue;
+      if (cmd.mod_only && !isSubVip(tags)) return true;
+      const ck = `${streamerId}:cmd:${cmd.id}`;
+      if (Date.now() - (_cmdCooldowns.get(ck) ?? 0) < cmd.cooldown_seconds * 1000) return true;
+      _cmdCooldowns.set(ck, Date.now());
+      try { await this.client.say(channel, cmd.response.trim()); } catch {}
+      return true;
+    }
+    return false;
+  }
+
+  // ── Template comandi predefiniti ──────────────────────────────────────────
+  async _handleTemplateCommand(channel, tags, streamer, lowerMsg) {
+    const streamerId = streamer.streamer_id;
+    const TRIGGERS   = ['!uptime', '!game', '!title', '!followage', '!social', '!schedule', '!commands'];
+    const trigger    = TRIGGERS.find(t => lowerMsg === t || lowerMsg.startsWith(t + ' '));
+    if (!trigger) return false;
+
+    const tname = trigger.slice(1);
+    const { rows } = await pool.query(
+      'SELECT enabled, cooldown_seconds FROM bot_command_templates WHERE streamer_id = $1 AND name = $2',
+      [streamerId, tname]
+    );
+    const cfg     = rows[0];
+    if (cfg?.enabled === false) return false;
+    const cooldown = cfg?.cooldown_seconds ?? 30;
+    const ck       = `${streamerId}:tpl:${tname}`;
+    if (Date.now() - (_cmdCooldowns.get(ck) ?? 0) < cooldown * 1000) return true;
+    _cmdCooldowns.set(ck, Date.now());
+
+    let reply = '';
+    try {
+      if (tname === 'uptime') {
+        const started = currentStreamStartedAt.get(streamerId);
+        if (!started) {
+          reply = 'La live non è ancora iniziata.';
+        } else {
+          const ms  = Date.now() - started.getTime();
+          const h   = Math.floor(ms / 3_600_000);
+          const min = Math.floor((ms % 3_600_000) / 60_000);
+          reply = h > 0 ? `La live è iniziata ${h}h ${min}min fa.` : `La live è iniziata ${min} minuti fa.`;
+        }
+      } else if (tname === 'game') {
+        const game = currentGames.get(streamerId);
+        reply = game ? `Stiamo giocando a: ${game}` : 'Nessun gioco impostato al momento.';
+      } else if (tname === 'title') {
+        const token = await getAppToken();
+        const cid   = process.env.TWITCH_CLIENT_ID;
+        if (token && cid && streamer.twitch_id) {
+          const r = await axios.get(
+            `https://api.twitch.tv/helix/channels?broadcaster_id=${encodeURIComponent(streamer.twitch_id)}`,
+            { headers: { 'Client-ID': cid, Authorization: `Bearer ${token}` } }
+          );
+          reply = r.data?.data?.[0]?.title?.trim() || 'Titolo non disponibile.';
+        } else {
+          reply = 'Titolo non disponibile.';
+        }
+      } else if (tname === 'followage') {
+        const caller = (tags?.username || tags?.['display-name'] || '').toLowerCase();
+        const parts  = lowerMsg.split(/\s+/);
+        const target = (parts[1]?.replace('@', '').trim()) || caller;
+        if (!target || !streamer.twitch_id) {
+          reply = 'Usa !followage @username';
+        } else {
+          try {
+            const appToken = await getAppToken();
+            const cid      = process.env.TWITCH_CLIENT_ID;
+            if (!appToken || !cid) throw new Error('no app token');
+            const ur = await axios.get(
+              `https://api.twitch.tv/helix/users?login=${encodeURIComponent(target)}`,
+              { headers: { 'Client-ID': cid, Authorization: `Bearer ${appToken}` } }
+            );
+            const userId = ur.data?.data?.[0]?.id;
+            if (!userId) {
+              reply = `@${target} non trovato.`;
+            } else {
+              const fr = await axios.get(
+                `https://api.twitch.tv/helix/channels/followers?broadcaster_id=${encodeURIComponent(streamer.twitch_id)}&user_id=${encodeURIComponent(userId)}`,
+                { headers: { 'Client-ID': cid, Authorization: `Bearer ${appToken}` } }
+              );
+              const fd = fr.data?.data?.[0];
+              if (!fd) {
+                reply = `@${target} non segue questo canale.`;
+              } else {
+                const ms   = Date.now() - new Date(fd.followed_at).getTime();
+                const yrs  = Math.floor(ms / (365.25 * 86_400_000));
+                const mos  = Math.floor((ms % (365.25 * 86_400_000)) / (30.44 * 86_400_000));
+                const days = Math.floor(ms / 86_400_000);
+                if (yrs > 0)       reply = `@${target} segue il canale da ${yrs} ann${yrs === 1 ? 'o' : 'i'} e ${mos} mes${mos === 1 ? 'e' : 'i'}.`;
+                else if (mos > 0)  reply = `@${target} segue il canale da ${mos} mes${mos === 1 ? 'e' : 'i'}.`;
+                else               reply = `@${target} segue il canale da ${days} giorn${days === 1 ? 'o' : 'i'}.`;
+              }
+            }
+          } catch (e) {
+            console.warn('[Templates][followage]', e.message);
+            reply = 'Impossibile verificare il followage in questo momento.';
+          }
+        }
+      } else if (tname === 'social') {
+        reply = streamer.social_links?.trim() || 'Nessun social configurato.';
+      } else if (tname === 'schedule') {
+        reply = streamer.stream_schedule?.trim() || 'Nessun orario configurato.';
+      } else if (tname === 'commands') {
+        const { rows: dbCmds } = await pool.query(
+          'SELECT trigger FROM bot_commands WHERE streamer_id = $1 AND active = TRUE ORDER BY trigger',
+          [streamerId]
+        );
+        const legacyCmds = parseJson(streamer.custom_commands, [])
+          .filter(c => c.active !== false && c.trigger?.trim())
+          .map(c => c.trigger.trim().toLowerCase());
+        const all = [...new Set([...legacyCmds, ...dbCmds.map(r => r.trigger)])].sort();
+        reply = all.length > 0 ? `Comandi: ${all.join(', ')}` : 'Nessun comando personalizzato.';
+      }
+      if (reply) await this.client.say(channel, reply).catch(() => {});
+    } catch (e) {
+      console.warn(`[Templates][${tname}]`, e.message);
+    }
+    return true;
+  }
+
+  // ── Contatori ─────────────────────────────────────────────────────────────
+  async _handleCounterCommand(channel, tags, streamer, lowerMsg) {
+    const streamerId = streamer.streamer_id;
+    const parts      = lowerMsg.split(/\s+/);
+    const trigger    = parts[0];
+    const action     = parts[1] ?? '';
+
+    const { rows } = await pool.query(
+      'SELECT id, name, value FROM bot_counters WHERE streamer_id = $1 AND active = TRUE AND trigger = $2',
+      [streamerId, trigger]
+    );
+    if (!rows[0]) return false;
+
+    const counter = rows[0];
+    const isMod   = isSubVip(tags);
+    let newValue  = counter.value;
+    let changed   = false;
+
+    if      (action === '+')                               { newValue = counter.value + 1; changed = true; }
+    else if (action === '-'     && isMod)                  { newValue = Math.max(0, counter.value - 1); changed = true; }
+    else if (action === 'reset' && isMod)                  { newValue = 0; changed = true; }
+    else if (action === 'set'   && isMod && !isNaN(parseInt(parts[2]))) { newValue = parseInt(parts[2]); changed = true; }
+
+    if (changed) {
+      await pool.query('UPDATE bot_counters SET value = $1 WHERE id = $2', [newValue, counter.id]).catch(() => {});
+    }
+
+    const displayValue = changed ? newValue : counter.value;
+    await this.client.say(channel, `${counter.name}: ${displayValue}`).catch(() => {});
+    return true;
   }
 
   async _handleLurk(channel, streamer, username) {
@@ -1398,6 +1634,13 @@ class BotManager {
     const userCtx = buildUserContext(streamer.streamer_id, mentionedNames);
     if (userCtx) {
       systemPrompt += `\n\n${userCtx}`;
+    }
+
+    // ── Contesto emote personalizzate del canale ─────────────────────────────
+    const emotes = _emoteCache.get(streamer.streamer_id) ?? [];
+    if (emotes.length > 0) {
+      const emoteList = emotes.map(e => `${e.emote_name}: ${e.description}`).join('\n');
+      systemPrompt += `\n\n## EMOTE DEL CANALE\nQueste sono le emote personalizzate con il loro significato:\n${emoteList}`;
     }
 
     // ── Istruzione rilevamento soprannome ────────────────────────────────────
@@ -1713,6 +1956,8 @@ class BotManager {
       resetSessionCount(streamer.streamer_id);
       const q = songQueues.get(streamer.streamer_id);
       if (q) { q.songs = []; q.srCounts = new Map(); }
+      currentStreamStartedAt.set(streamer.streamer_id, new Date(event.started_at ?? Date.now()));
+      this._startAnnouncements(streamer.streamer_id).catch(() => {});
       console.log(`[Bot] Stream online: #${streamer.twitch_username} — contatori resettati`);
       if (streamer.twitch_id && process.env.TWITCH_CLIENT_ID) {
         fetchCurrentGame(streamer.streamer_id, streamer.twitch_id)
@@ -1741,6 +1986,8 @@ class BotManager {
       const q = songQueues.get(streamer.streamer_id);
       if (q) { q.songs = []; q.srCounts = new Map(); }
       currentGames.set(streamer.streamer_id, null);
+      currentStreamStartedAt.delete(streamer.streamer_id);
+      this._stopAnnouncements(streamer.streamer_id);
       channelHistory.delete(streamer.streamer_id);
       lurkSessionUsers.delete(streamer.streamer_id);
       sessionActiveUsers.delete(streamer.streamer_id);
