@@ -1,6 +1,7 @@
 import express from 'express';
 import pool from '../db.js';
 import { authenticateToken } from '../middleware/auth.js';
+import { getCachedTwitchEmotes, fetchAndCacheTwitchEmotes } from '../bot/botManager.js';
 
 export const commandsRoutes = express.Router();
 commandsRoutes.use(authenticateToken);
@@ -210,6 +211,26 @@ commandsRoutes.delete('/announcements/:id', async (req, res) => {
 });
 
 // ─── EMOTE DESCRIPTIONS ──────────────────────────────────────────────────────
+
+commandsRoutes.get('/emotes/twitch', async (req, res) => {
+  try {
+    const streamerId = req.user.streamer_id;
+    let emotes = getCachedTwitchEmotes(streamerId);
+    if (emotes.length === 0) {
+      // On-demand fetch se la cache è vuota (es. utente apre la dashboard prima che il bot si avvii)
+      const { rows } = await pool.query('SELECT twitch_id FROM streamers WHERE id = $1', [streamerId]);
+      const twitchId = rows[0]?.twitch_id;
+      if (twitchId) {
+        await fetchAndCacheTwitchEmotes(streamerId, twitchId);
+        emotes = getCachedTwitchEmotes(streamerId);
+      }
+    }
+    res.json(emotes);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Errore nel recupero degli emote Twitch' });
+  }
+});
 
 commandsRoutes.get('/emotes', async (req, res) => {
   try {

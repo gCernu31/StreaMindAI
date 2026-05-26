@@ -479,31 +479,59 @@ function TabContatori() {
 // ─── TAB: Emote ───────────────────────────────────────────────────────────────
 
 function TabEmote() {
-  const [emotes,  setEmotes]  = useState([]);
+  // rows: [{emote_name, description, fromTwitch?}]
+  const [rows,    setRows]    = useState([]);
   const [loading, setLoading] = useState(true);
   const [saving,  setSaving]  = useState(false);
   const [saved,   setSaved]   = useState(false);
 
   useEffect(() => {
-    fetch('/api/commands/emotes', { headers: authHeaders() })
-      .then(r => r.ok ? r.json() : [])
-      .then(data => { setEmotes(data.length > 0 ? data : [{ emote_name: '', description: '' }]); setLoading(false); });
+    Promise.all([
+      fetch('/api/commands/emotes',        { headers: authHeaders() }).then(r => r.ok ? r.json() : []),
+      fetch('/api/commands/emotes/twitch', { headers: authHeaders() }).then(r => r.ok ? r.json() : []),
+    ]).then(([saved, twitch]) => {
+      const descMap = Object.fromEntries(saved.map(e => [e.emote_name, e.description]));
+      if (twitch.length > 0) {
+        // Mostra tutte le emote Twitch con descrizione opzionale pre-compilata
+        const merged = twitch.map(te => ({
+          emote_name:  te.name,
+          description: descMap[te.name] ?? '',
+          fromTwitch:  true,
+          emote_type:  te.emote_type,
+        }));
+        // Aggiungi eventuali emote manuali non presenti in Twitch
+        const twitchNames = new Set(twitch.map(t => t.name));
+        for (const s of saved) {
+          if (!twitchNames.has(s.emote_name)) {
+            merged.push({ emote_name: s.emote_name, description: s.description, fromTwitch: false });
+          }
+        }
+        setRows(merged);
+      } else if (saved.length > 0) {
+        setRows(saved.map(e => ({ ...e, fromTwitch: false })));
+      } else {
+        setRows([{ emote_name: '', description: '', fromTwitch: false }]);
+      }
+      setLoading(false);
+    });
   }, []);
 
-  function update(idx, key, val) {
-    setEmotes(es => es.map((e, i) => i === idx ? { ...e, [key]: val } : e));
+  function updateDesc(idx, val) {
+    setRows(rs => rs.map((r, i) => i === idx ? { ...r, description: val } : r));
   }
-
-  function addRow() { setEmotes(es => [...es, { emote_name: '', description: '' }]); }
-  function removeRow(idx) { setEmotes(es => es.filter((_, i) => i !== idx)); }
+  function updateName(idx, val) {
+    setRows(rs => rs.map((r, i) => i === idx ? { ...r, emote_name: val } : r));
+  }
+  function addRow() { setRows(rs => [...rs, { emote_name: '', description: '', fromTwitch: false }]); }
+  function removeRow(idx) { setRows(rs => rs.filter((_, i) => i !== idx)); }
 
   async function saveAll() {
     setSaving(true); setSaved(false);
     try {
-      const valid = emotes.filter(e => e.emote_name?.trim() && e.description?.trim());
+      const valid = rows.filter(r => r.emote_name?.trim() && r.description?.trim());
       await fetch('/api/commands/emotes', {
         method: 'PUT', headers: authHeaders(),
-        body: JSON.stringify(valid),
+        body: JSON.stringify(valid.map(r => ({ emote_name: r.emote_name, description: r.description }))),
       });
       setSaved(true);
       setTimeout(() => setSaved(false), 2000);
@@ -512,40 +540,74 @@ function TabEmote() {
     }
   }
 
-  if (loading) return <div className="space-y-2">{[1,2,3].map(i => <div key={i} className="h-12 rounded-xl animate-pulse bg-hally-border" />)}</div>;
+  const typeLabel = { subscriptions: 'sub', bitstiers: 'bits', follower: 'follower' };
+
+  if (loading) return <div className="space-y-2">{[1,2,3,4].map(i => <div key={i} className="h-12 rounded-xl animate-pulse bg-hally-border" />)}</div>;
+
+  const hasTwitch = rows.some(r => r.fromTwitch);
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-4">
-        <p className="text-sm text-hally-text-muted">Descrivi le emote del canale per aiutare il bot AI a capirne il significato.</p>
-        <button style={{ ...BTN_PRIMARY, ...(saved ? { backgroundColor: '#10b981' } : {}) }} onClick={saveAll} disabled={saving}>
-          {saving ? 'Salvataggio...' : saved ? '✓ Salvato' : 'Salva tutto'}
+      <div className="flex items-start justify-between mb-4 gap-4">
+        <div>
+          <p className="text-sm text-hally-text-muted">
+            {hasTwitch
+              ? 'Emote del canale caricate automaticamente da Twitch. Aggiungi una descrizione per aiutare il bot AI a capirne il significato.'
+              : 'Descrivi le emote del canale per aiutare il bot AI a capirne il significato.'}
+          </p>
+          {hasTwitch && (
+            <p className="text-xs mt-1" style={{ color: '#6b6b6b' }}>
+              La descrizione è opzionale — vengono salvate solo le emote con descrizione compilata.
+            </p>
+          )}
+        </div>
+        <button
+          style={{ ...BTN_PRIMARY, flexShrink: 0, ...(saved ? { backgroundColor: '#10b981' } : {}) }}
+          onClick={saveAll}
+          disabled={saving}
+        >
+          {saving ? 'Salvataggio...' : saved ? '✓ Salvato' : 'Salva'}
         </button>
       </div>
+
       <div className="space-y-2">
-        {emotes.map((e, idx) => (
+        {rows.map((row, idx) => (
           <div key={idx} className="flex items-center gap-2">
+            {row.fromTwitch ? (
+              <div
+                className="flex items-center gap-1.5 shrink-0"
+                style={{ width: 150, backgroundColor: '#1a1a1a', border: '1px solid #2a2a2a', borderRadius: 8, padding: '8px 10px' }}
+              >
+                <span className="text-xs font-mono font-semibold text-hally-text truncate flex-1">{row.emote_name}</span>
+                {row.emote_type && (
+                  <span className="text-xs shrink-0" style={{ color: '#8B5CF6', fontSize: 10 }}>
+                    {typeLabel[row.emote_type] ?? row.emote_type}
+                  </span>
+                )}
+              </div>
+            ) : (
+              <input
+                className={INPUT}
+                style={{ width: 150, flex: 'none' }}
+                placeholder="Nome emote"
+                value={row.emote_name}
+                onChange={ev => updateName(idx, ev.target.value)}
+              />
+            )}
             <input
               className={INPUT}
-              style={{ width: 130, flex: 'none' }}
-              placeholder="Emote"
-              value={e.emote_name}
-              onChange={ev => update(idx, 'emote_name', ev.target.value)}
+              placeholder={row.fromTwitch ? 'Descrizione opzionale…' : 'es. Emote di gioia usata quando qualcosa va bene'}
+              value={row.description}
+              onChange={ev => updateDesc(idx, ev.target.value)}
             />
-            <input
-              className={INPUT}
-              placeholder="es. Emote di gioia usata quando qualcosa va bene"
-              value={e.description}
-              onChange={ev => update(idx, 'description', ev.target.value)}
-            />
-            <button
-              onClick={() => removeRow(idx)}
-              style={{ ...BTN_DANGER, flexShrink: 0 }}
-            >✕</button>
+            {!row.fromTwitch && (
+              <button onClick={() => removeRow(idx)} style={{ ...BTN_DANGER, flexShrink: 0 }}>✕</button>
+            )}
           </div>
         ))}
       </div>
-      <button style={{ ...BTN_SECONDARY, marginTop: 12 }} onClick={addRow}>+ Aggiungi emote</button>
+
+      <button style={{ ...BTN_SECONDARY, marginTop: 12 }} onClick={addRow}>+ Aggiungi emote manuale</button>
     </div>
   );
 }

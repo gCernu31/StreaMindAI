@@ -80,6 +80,9 @@ const _announcementTimers = new Map();
 // Cache descrizioni emote: streamerId → [{emote_name, description}]
 const _emoteCache = new Map();
 
+// Cache emote Twitch del canale: streamerId → [{name, emote_type}]
+const _twitchEmoteCache = new Map();
+
 // Cronologia scambi AI per canale: streamerId → [{role,content}] (max 10 = 5 scambi)
 const channelHistory = new Map();
 
@@ -432,6 +435,29 @@ async function fetchCurrentGame(streamerId, twitchId) {
   } catch (e) {
     console.error('[Category] fetch:', e.response?.data?.error ?? e.message);
   }
+}
+
+// ─── Emote Twitch del canale ──────────────────────────────────────────────────
+
+export async function fetchAndCacheTwitchEmotes(streamerId, twitchId) {
+  const token = await getAppToken();
+  const cid   = process.env.TWITCH_CLIENT_ID;
+  if (!token || !cid || !twitchId) return;
+  try {
+    const r = await axios.get(
+      `https://api.twitch.tv/helix/chat/emotes?broadcaster_id=${encodeURIComponent(twitchId)}`,
+      { headers: { 'Client-ID': cid, Authorization: `Bearer ${token}` } }
+    );
+    const emotes = (r.data?.data ?? []).map(e => ({ name: e.name, emote_type: e.emote_type }));
+    _twitchEmoteCache.set(streamerId, emotes);
+    console.log(`[Emotes] ${emotes.length} emote Twitch caricate per streamer_id=${streamerId}`);
+  } catch (e) {
+    console.warn('[Emotes] fetchAndCacheTwitchEmotes:', e.response?.data?.message ?? e.message);
+  }
+}
+
+export function getCachedTwitchEmotes(streamerId) {
+  return _twitchEmoteCache.get(streamerId) ?? [];
 }
 
 // ─── EventSub ─────────────────────────────────────────────────────────────────
@@ -992,6 +1018,7 @@ class BotManager {
     this._offlineNotified    = false;
     this._monitorStarted     = false;
     this._notifiedStreamers  = [];   // snapshot streamer notificati (per invio recovery)
+    this._emoteRefreshInterval = null;
   }
 
   // ── Avvio ──────────────────────────────────────────────────────────────────
@@ -1018,7 +1045,16 @@ class BotManager {
         songQueues.set(s.streamer_id, { enabled: true, songs: [], srCounts: new Map() });
       }
       this._loadEmotes(s.streamer_id).catch(() => {});
+      if (s.twitch_id) fetchAndCacheTwitchEmotes(s.streamer_id, s.twitch_id).catch(() => {});
     });
+
+    // Aggiorna le emote Twitch ogni ora per tutti i canali attivi
+    if (this._emoteRefreshInterval) clearInterval(this._emoteRefreshInterval);
+    this._emoteRefreshInterval = setInterval(() => {
+      for (const s of Object.values(this.channelMap)) {
+        if (s.twitch_id) fetchAndCacheTwitchEmotes(s.streamer_id, s.twitch_id).catch(() => {});
+      }
+    }, 60 * 60_000);
 
     const channels = streamers.map(s => s.twitch_username.toLowerCase());
     console.log(`[Bot] Canali all'avvio: ${channels.length}`);
@@ -1132,6 +1168,10 @@ class BotManager {
   _scheduleRestart(delayMs = 30_000) {
     if (this._restarting) return;
     this._restarting = true;
+    if (this._emoteRefreshInterval) {
+      clearInterval(this._emoteRefreshInterval);
+      this._emoteRefreshInterval = null;
+    }
     console.log(`[Bot] Riavvio tra ${delayMs / 1000}s...`);
     setTimeout(() => {
       this._restarting = false;
@@ -1170,6 +1210,7 @@ class BotManager {
               );
             }
             this._loadEmotes(s.streamer_id).catch(() => {});
+            if (s.twitch_id) fetchAndCacheTwitchEmotes(s.streamer_id, s.twitch_id).catch(() => {});
           } catch (e) {
             console.warn(`[Bot] Join #${ch}:`, e.message);
           }
