@@ -9,13 +9,14 @@ commandsRoutes.use(authenticateToken);
 // ─── TEMPLATE COMMANDS ───────────────────────────────────────────────────────
 
 const TEMPLATE_DEFAULTS = [
-  { name: 'uptime',    description: '!uptime — durata della live corrente',        cooldown_seconds: 30 },
-  { name: 'game',      description: '!game — categoria/gioco attivo',               cooldown_seconds: 15 },
-  { name: 'title',     description: '!title — titolo dello stream',                 cooldown_seconds: 30 },
-  { name: 'followage', description: '!followage @user — da quanto segue il canale', cooldown_seconds: 30 },
-  { name: 'social',    description: '!social — link social configurati',             cooldown_seconds: 30 },
-  { name: 'schedule',  description: '!schedule — orario delle live',                cooldown_seconds: 60 },
-  { name: 'commands',  description: '!commands — lista comandi disponibili',         cooldown_seconds: 30 },
+  { name: 'uptime',    description: '!uptime — durata della live corrente',                        cooldown_seconds: 30 },
+  { name: 'game',      description: '!game — categoria/gioco attivo',                               cooldown_seconds: 15 },
+  { name: 'title',     description: '!title — titolo dello stream',                                 cooldown_seconds: 30 },
+  { name: 'followage', description: '!followage @user — da quanto segue il canale',                 cooldown_seconds: 30 },
+  { name: 'social',    description: '!social — link social configurati',                             cooldown_seconds: 30 },
+  { name: 'schedule',  description: '!schedule — orario delle live',                                cooldown_seconds: 60 },
+  { name: 'commands',  description: '!commands — lista comandi disponibili',                         cooldown_seconds: 30 },
+  { name: 'clip',      description: '!clip — crea una clip degli ultimi 30s e manda il link',       cooldown_seconds: 30, fixedCooldown: true },
 ];
 
 commandsRoutes.get('/templates', async (req, res) => {
@@ -30,6 +31,7 @@ commandsRoutes.get('/templates', async (req, res) => {
       description:      t.description,
       enabled:          saved[t.name]?.enabled ?? true,
       cooldown_seconds: saved[t.name]?.cooldown_seconds ?? t.cooldown_seconds,
+      fixedCooldown:    t.fixedCooldown ?? false,
     }));
     res.json(result);
   } catch (err) {
@@ -145,9 +147,20 @@ commandsRoutes.delete('/counters/:id', async (req, res) => {
 
 commandsRoutes.get('/announcements', async (req, res) => {
   try {
+    const streamerId = req.user.streamer_id;
     const { rows } = await pool.query(
-      'SELECT id, message, interval_minutes, active FROM bot_announcements WHERE streamer_id = $1 ORDER BY id',
-      [req.user.streamer_id]
+      `SELECT a.id, a.name, a.interval_minutes, a.interval_offline_minutes,
+              a.min_chat_lines, a.title_keywords, a.game_filter, a.active,
+              COALESCE(
+                json_agg(m.message ORDER BY m.sort_order) FILTER (WHERE m.id IS NOT NULL),
+                '[]'::json
+              ) AS messages
+       FROM bot_announcements a
+       LEFT JOIN bot_announcement_messages m ON m.announcement_id = a.id
+       WHERE a.streamer_id = $1
+       GROUP BY a.id
+       ORDER BY a.id`,
+      [streamerId]
     );
     res.json(rows);
   } catch (err) {
@@ -159,13 +172,56 @@ commandsRoutes.get('/announcements', async (req, res) => {
 commandsRoutes.post('/announcements', async (req, res) => {
   try {
     const streamerId = req.user.streamer_id;
-    const { message, interval_minutes = 30 } = req.body;
-    if (!message?.trim()) return res.status(400).json({ error: 'message obbligatorio' });
-    const { rows } = await pool.query(
-      'INSERT INTO bot_announcements (streamer_id, message, interval_minutes) VALUES ($1, $2, $3) RETURNING *',
-      [streamerId, message.trim(), Math.max(5, Math.min(120, Number(interval_minutes) || 30))]
-    );
-    res.status(201).json(rows[0]);
+    const {
+      name = '',
+      messages = [],
+      interval_minutes = 30,
+      interval_offline_minutes = 30,
+      min_chat_lines = 0,
+      title_keywords = '',
+      game_filter = '',
+    } = req.body;
+    if (!Array.isArray(messages) || messages.filter(m => m?.trim()).length === 0) {
+      return res.status(400).json({ error: 'Almeno un messaggio obbligatorio' });
+    }
+
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+      const { rows } = await client.query(
+        `INSERT INTO bot_announcements
+           (streamer_id, name, message, interval_minutes, interval_offline_minutes, min_chat_lines, title_keywords, game_filter)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+         RETURNING *`,
+        [
+          streamerId,
+          name.trim(),
+          messages[0].trim(),
+          Math.max(1, Number(interval_minutes) || 30),
+          Math.max(1, Number(interval_offline_minutes) || 30),
+          Number(min_chat_lines) || 0,
+          title_keywords.trim(),
+          game_filter.trim(),
+        ]
+      );
+      const ann = rows[0];
+      for (let i = 0; i < messages.length; i++) {
+        const msg = messages[i]?.trim();
+        if (msg) {
+          await client.query(
+            'INSERT INTO bot_announcement_messages (announcement_id, message, sort_order) VALUES ($1, $2, $3)',
+            [ann.id, msg, i]
+          );
+        }
+      }
+      await client.query('COMMIT');
+      res.status(201).json({ ...ann, messages: messages.filter(m => m?.trim()) });
+    } catch (e) {
+      await client.query('ROLLBACK');
+      throw e;
+    } finally {
+      client.release();
+    }
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Errore nella creazione dell'annuncio" });
@@ -175,22 +231,71 @@ commandsRoutes.post('/announcements', async (req, res) => {
 commandsRoutes.put('/announcements/:id', async (req, res) => {
   try {
     const streamerId = req.user.streamer_id;
-    const { message, interval_minutes, active } = req.body;
-    const mins = interval_minutes != null
-      ? Math.max(5, Math.min(120, Number(interval_minutes) || 30))
-      : null;
-    const { rows } = await pool.query(
-      `UPDATE bot_announcements SET
-         message          = COALESCE($1, message),
-         interval_minutes = COALESCE($2, interval_minutes),
-         active           = COALESCE($3, active),
-         updated_at       = NOW()
-       WHERE id = $4 AND streamer_id = $5
-       RETURNING *`,
-      [message?.trim() || null, mins, active, req.params.id, streamerId]
-    );
-    if (!rows[0]) return res.status(404).json({ error: 'Annuncio non trovato' });
-    res.json(rows[0]);
+    const {
+      name,
+      messages,
+      interval_minutes,
+      interval_offline_minutes,
+      min_chat_lines,
+      title_keywords,
+      game_filter,
+      active,
+    } = req.body;
+
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+      const { rows } = await client.query(
+        `UPDATE bot_announcements SET
+           name                     = COALESCE($1, name),
+           interval_minutes         = COALESCE($2, interval_minutes),
+           interval_offline_minutes = COALESCE($3, interval_offline_minutes),
+           min_chat_lines           = COALESCE($4, min_chat_lines),
+           title_keywords           = COALESCE($5, title_keywords),
+           game_filter              = COALESCE($6, game_filter),
+           active                   = COALESCE($7, active),
+           updated_at               = NOW()
+         WHERE id = $8 AND streamer_id = $9
+         RETURNING *`,
+        [
+          name?.trim() ?? null,
+          interval_minutes != null ? Math.max(1, Number(interval_minutes)) : null,
+          interval_offline_minutes != null ? Math.max(1, Number(interval_offline_minutes)) : null,
+          min_chat_lines != null ? Number(min_chat_lines) : null,
+          title_keywords?.trim() ?? null,
+          game_filter?.trim() ?? null,
+          active,
+          req.params.id,
+          streamerId,
+        ]
+      );
+      if (!rows[0]) { await client.query('ROLLBACK'); return res.status(404).json({ error: 'Annuncio non trovato' }); }
+
+      if (Array.isArray(messages)) {
+        await client.query('DELETE FROM bot_announcement_messages WHERE announcement_id = $1', [req.params.id]);
+        // also update legacy message column
+        const firstMsg = messages.find(m => m?.trim())?.trim();
+        if (firstMsg) {
+          await client.query('UPDATE bot_announcements SET message = $1 WHERE id = $2', [firstMsg, req.params.id]);
+        }
+        for (let i = 0; i < messages.length; i++) {
+          const msg = messages[i]?.trim();
+          if (msg) {
+            await client.query(
+              'INSERT INTO bot_announcement_messages (announcement_id, message, sort_order) VALUES ($1, $2, $3)',
+              [req.params.id, msg, i]
+            );
+          }
+        }
+      }
+      await client.query('COMMIT');
+      res.json({ ...rows[0], messages: messages ?? undefined });
+    } catch (e) {
+      await client.query('ROLLBACK');
+      throw e;
+    } finally {
+      client.release();
+    }
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Errore nel salvataggio dell'annuncio" });
@@ -217,7 +322,6 @@ commandsRoutes.get('/emotes/twitch', async (req, res) => {
     const streamerId = req.user.streamer_id;
     let emotes = getCachedTwitchEmotes(streamerId);
     if (emotes.length === 0) {
-      // On-demand fetch se la cache è vuota (es. utente apre la dashboard prima che il bot si avvii)
       const { rows } = await pool.query('SELECT twitch_id FROM streamers WHERE id = $1', [streamerId]);
       const twitchId = rows[0]?.twitch_id;
       if (twitchId) {
@@ -282,7 +386,10 @@ commandsRoutes.put('/emotes', async (req, res) => {
 commandsRoutes.get('/', async (req, res) => {
   try {
     const { rows } = await pool.query(
-      'SELECT id, trigger, response, active, cooldown_seconds, mod_only FROM bot_commands WHERE streamer_id = $1 ORDER BY id',
+      `SELECT id, trigger, response, active,
+              global_cooldown_seconds, user_cooldown_seconds,
+              access_level, response_type
+       FROM bot_commands WHERE streamer_id = $1 ORDER BY id`,
       [req.user.streamer_id]
     );
     res.json(rows);
@@ -295,13 +402,23 @@ commandsRoutes.get('/', async (req, res) => {
 commandsRoutes.post('/', async (req, res) => {
   try {
     const streamerId = req.user.streamer_id;
-    const { trigger, response, cooldown_seconds = 5, mod_only = false } = req.body;
+    const {
+      trigger,
+      response,
+      global_cooldown_seconds = 5,
+      user_cooldown_seconds   = 15,
+      access_level            = 'everyone',
+      response_type           = 'say',
+    } = req.body;
     if (!trigger?.trim() || !response?.trim()) return res.status(400).json({ error: 'trigger e response obbligatori' });
     const t = trigger.trim().toLowerCase();
     if (!t.startsWith('!')) return res.status(400).json({ error: 'Il trigger deve iniziare con !' });
     const { rows } = await pool.query(
-      'INSERT INTO bot_commands (streamer_id, trigger, response, cooldown_seconds, mod_only) VALUES ($1, $2, $3, $4, $5) RETURNING *',
-      [streamerId, t, response.trim(), Number(cooldown_seconds) || 5, Boolean(mod_only)]
+      `INSERT INTO bot_commands
+         (streamer_id, trigger, response, cooldown_seconds, global_cooldown_seconds, user_cooldown_seconds, access_level, response_type)
+       VALUES ($1, $2, $3, $4, $4, $5, $6, $7)
+       RETURNING *`,
+      [streamerId, t, response.trim(), Number(global_cooldown_seconds) || 5, Number(user_cooldown_seconds) || 15, access_level, response_type]
     );
     res.status(201).json(rows[0]);
   } catch (err) {
@@ -314,20 +431,24 @@ commandsRoutes.post('/', async (req, res) => {
 commandsRoutes.put('/:id', async (req, res) => {
   try {
     const streamerId = req.user.streamer_id;
-    const { trigger, response, active, cooldown_seconds, mod_only } = req.body;
+    const { trigger, response, active, global_cooldown_seconds, user_cooldown_seconds, access_level, response_type } = req.body;
     const t = trigger?.trim()?.toLowerCase() || null;
     if (t && !t.startsWith('!')) return res.status(400).json({ error: 'Il trigger deve iniziare con !' });
+    const gcd = global_cooldown_seconds != null ? Number(global_cooldown_seconds) : null;
     const { rows } = await pool.query(
       `UPDATE bot_commands SET
-         trigger          = COALESCE($1, trigger),
-         response         = COALESCE($2, response),
-         active           = COALESCE($3, active),
-         cooldown_seconds = COALESCE($4, cooldown_seconds),
-         mod_only         = COALESCE($5, mod_only),
-         updated_at       = NOW()
-       WHERE id = $6 AND streamer_id = $7
+         trigger                 = COALESCE($1, trigger),
+         response                = COALESCE($2, response),
+         active                  = COALESCE($3, active),
+         global_cooldown_seconds = COALESCE($4, global_cooldown_seconds),
+         cooldown_seconds        = COALESCE($4, cooldown_seconds),
+         user_cooldown_seconds   = COALESCE($5, user_cooldown_seconds),
+         access_level            = COALESCE($6, access_level),
+         response_type           = COALESCE($7, response_type),
+         updated_at              = NOW()
+       WHERE id = $8 AND streamer_id = $9
        RETURNING *`,
-      [t, response?.trim() || null, active, cooldown_seconds != null ? Number(cooldown_seconds) : null, mod_only, req.params.id, streamerId]
+      [t, response?.trim() || null, active, gcd, user_cooldown_seconds != null ? Number(user_cooldown_seconds) : null, access_level ?? null, response_type ?? null, req.params.id, streamerId]
     );
     if (!rows[0]) return res.status(404).json({ error: 'Comando non trovato' });
     res.json(rows[0]);

@@ -161,6 +161,40 @@ CREATE INDEX IF NOT EXISTS idx_bot_announcements_streamer
 CREATE INDEX IF NOT EXISTS idx_bot_counters_streamer
   ON bot_counters (streamer_id);
 
+-- ============================================================
+-- Migliorie Sistema Comandi v2
+-- ============================================================
+
+ALTER TABLE bot_commands
+  ADD COLUMN IF NOT EXISTS global_cooldown_seconds INTEGER DEFAULT 5,
+  ADD COLUMN IF NOT EXISTS user_cooldown_seconds   INTEGER DEFAULT 15,
+  ADD COLUMN IF NOT EXISTS access_level            VARCHAR(20) DEFAULT 'everyone',
+  ADD COLUMN IF NOT EXISTS response_type           VARCHAR(10) DEFAULT 'say';
+
+ALTER TABLE bot_announcements
+  ADD COLUMN IF NOT EXISTS name                    VARCHAR(100) DEFAULT '',
+  ADD COLUMN IF NOT EXISTS interval_offline_minutes INTEGER DEFAULT 30,
+  ADD COLUMN IF NOT EXISTS min_chat_lines          INTEGER DEFAULT 0,
+  ADD COLUMN IF NOT EXISTS title_keywords          TEXT DEFAULT '',
+  ADD COLUMN IF NOT EXISTS game_filter             TEXT DEFAULT '';
+
+CREATE TABLE IF NOT EXISTS bot_announcement_messages (
+  id              SERIAL PRIMARY KEY,
+  announcement_id INTEGER NOT NULL REFERENCES bot_announcements(id) ON DELETE CASCADE,
+  message         TEXT NOT NULL,
+  sort_order      INTEGER DEFAULT 0
+);
+
+CREATE INDEX IF NOT EXISTS idx_ann_messages_announcement
+  ON bot_announcement_messages (announcement_id, sort_order);
+
+-- Migra i messaggi esistenti (eseguita una sola volta grazie al WHERE NOT EXISTS)
+INSERT INTO bot_announcement_messages (announcement_id, message, sort_order)
+SELECT a.id, a.message, 0 FROM bot_announcements a
+WHERE NOT EXISTS (
+  SELECT 1 FROM bot_announcement_messages m WHERE m.announcement_id = a.id
+);
+
 -- Rinomina characters → members (idempotente per DB esistenti)
 DO $$
 BEGIN

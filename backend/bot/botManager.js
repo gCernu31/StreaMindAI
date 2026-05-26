@@ -74,8 +74,20 @@ const currentStreamStartedAt = new Map();
 // Cooldown comandi DB/template: key → timestamp
 const _cmdCooldowns = new Map();
 
-// Timer annunci periodici: streamerId → [timerId, ...]
+// Cooldown per singolo utente: `${streamerId}:cmd:${cmdId}:${username}` → timestamp
+const _userCmdCooldowns = new Map();
+
+// Timer annunci online: streamerId → [timerId, ...]
 const _announcementTimers = new Map();
+
+// Timer annunci offline: streamerId → [timerId, ...]
+const _offlineAnnouncementTimers = new Map();
+
+// Indice rotazione messaggi annunci: `${annId}` | `offline:${annId}` → number
+const _announcementIndexes = new Map();
+
+// Contatore righe chat per min_chat_lines: streamerId → {count, since}
+const _chatLineCounters = new Map();
 
 // Cache descrizioni emote: streamerId → [{emote_name, description}]
 const _emoteCache = new Map();
@@ -115,6 +127,44 @@ function parseJson(v, fallback) {
   if (!v) return fallback;
   if (typeof v === 'object') return v;
   try { return JSON.parse(v); } catch { return fallback; }
+}
+
+function substituteVars(text, ctx = {}) {
+  return text
+    .replace(/\$?\{user\}/gi,    ctx.user    ?? '')
+    .replace(/\$?\{channel\}/gi, ctx.channel ?? '')
+    .replace(/\$?\{game\}/gi,    ctx.game    ?? 'Nessun gioco')
+    .replace(/\$?\{uptime\}/gi,  ctx.uptime  ?? 'offline')
+    .replace(/\$?\{count\}/gi,   ctx.count != null ? String(ctx.count) : '')
+    .replace(/\$?\{random\s+(\d+)-(\d+)\}/gi, (_, a, b) => {
+      const lo = Math.min(Number(a), Number(b));
+      const hi = Math.max(Number(a), Number(b));
+      return String(Math.floor(Math.random() * (hi - lo + 1)) + lo);
+    });
+}
+
+function checkAccessLevel(tags, level) {
+  const isBroadcaster = !!(tags?.badges?.broadcaster);
+  const isMod         = !!(tags?.mod);
+  const isVip         = !!(tags?.vip);
+  const isSub         = !!(tags?.subscriber);
+  switch (level) {
+    case 'broadcaster': return isBroadcaster;
+    case 'moderator':   return isBroadcaster || isMod;
+    case 'vip':         return isBroadcaster || isMod || isVip;
+    case 'subscriber':  return isBroadcaster || isMod || isVip || isSub;
+    case 'everyone':
+    default:            return true;
+  }
+}
+
+function uptimeString(streamerId) {
+  const started = currentStreamStartedAt.get(streamerId);
+  if (!started) return 'offline';
+  const ms = Date.now() - started.getTime();
+  const h  = Math.floor(ms / 3_600_000);
+  const m  = Math.floor((ms % 3_600_000) / 60_000);
+  return h > 0 ? `${h}h ${m}min` : `${m}min`;
 }
 
 function checkEventCooldown(streamerId, type, username) {
@@ -1330,6 +1380,12 @@ class BotManager {
     const username = (tags.username || tags['display-name'] || 'utente').toLowerCase();
     const isSub    = isSubVip(tags);
 
+    // Contatore righe chat (per min_chat_lines degli annunci)
+    const _clc = _chatLineCounters.get(streamer.streamer_id) ?? { count: 0, since: Date.now() };
+    if (Date.now() - _clc.since > 5 * 60_000) { _clc.count = 1; _clc.since = Date.now(); }
+    else _clc.count++;
+    _chatLineCounters.set(streamer.streamer_id, _clc);
+
     // Buffer per analisi memoria (tutti i messaggi, non solo comandi)
     const bufLen = bufferChatMessage(streamer.streamer_id, username, msg);
     if (bufLen >= MEMORY_BATCH_SIZE) {
@@ -1382,57 +1438,164 @@ class BotManager {
     }
   }
 
-  // ── Avvia annunci periodici ───────────────────────────────────────────────
+  // ── Avvia annunci online ──────────────────────────────────────────────────
   async _startAnnouncements(streamerId) {
     this._stopAnnouncements(streamerId);
     try {
-      const { rows } = await pool.query(
-        'SELECT id, message, interval_minutes FROM bot_announcements WHERE streamer_id = $1 AND active = TRUE',
+      const { rows: anns } = await pool.query(
+        `SELECT a.id, a.interval_minutes, a.min_chat_lines, a.game_filter,
+                COALESCE(
+                  json_agg(m.message ORDER BY m.sort_order) FILTER (WHERE m.id IS NOT NULL),
+                  '[]'::json
+                ) AS messages
+         FROM bot_announcements a
+         LEFT JOIN bot_announcement_messages m ON m.announcement_id = a.id
+         WHERE a.streamer_id = $1 AND a.active = TRUE
+         GROUP BY a.id`,
         [streamerId]
       );
-      if (rows.length === 0) return;
+      if (anns.length === 0) return;
       const streamer = Object.values(this.channelMap).find(s => s.streamer_id === streamerId);
       if (!streamer) return;
       const channel = '#' + streamer.twitch_username.toLowerCase();
-      const timers  = rows.map(ann => {
-        const ms = ann.interval_minutes * 60_000;
+
+      const timers = anns.map(ann => {
+        const msgs = (ann.messages ?? []).filter(Boolean);
+        if (msgs.length === 0) return null;
+        const ms = Math.max(60_000, (ann.interval_minutes || 30) * 60_000);
         return setInterval(async () => {
           if (!this.connected) return;
-          try { await this.client.say(channel, ann.message); } catch {}
+          // min_chat_lines
+          if (ann.min_chat_lines > 0) {
+            const clc = _chatLineCounters.get(streamerId);
+            if (!clc || clc.count < ann.min_chat_lines) return;
+          }
+          // game filter
+          if (ann.game_filter?.trim()) {
+            const currentGame = (currentGames.get(streamerId) ?? '').toLowerCase();
+            const filters = ann.game_filter.split(',').map(g => g.trim().toLowerCase()).filter(Boolean);
+            if (filters.length > 0 && !filters.some(f => currentGame.includes(f))) return;
+          }
+          // rotazione messaggi
+          const idx = (_announcementIndexes.get(ann.id) ?? 0) % msgs.length;
+          _announcementIndexes.set(ann.id, idx + 1);
+          const text = substituteVars(msgs[idx], {
+            channel: streamer.twitch_username,
+            game:    currentGames.get(streamerId) ?? 'Nessun gioco',
+            uptime:  uptimeString(streamerId),
+          });
+          try { await this.client.say(channel, text); } catch {}
         }, ms);
-      });
+      }).filter(Boolean);
+
       _announcementTimers.set(streamerId, timers);
-      console.log(`[Announcements] Avviati ${timers.length} timer per streamer_id=${streamerId}`);
+      console.log(`[Announcements] Avviati ${timers.length} timer online per streamer_id=${streamerId}`);
     } catch (e) {
       console.warn('[Announcements] _startAnnouncements:', e.message);
     }
   }
 
-  // ── Ferma annunci periodici ───────────────────────────────────────────────
+  // ── Ferma annunci online ──────────────────────────────────────────────────
   _stopAnnouncements(streamerId) {
     const timers = _announcementTimers.get(streamerId);
     if (timers) {
       for (const t of timers) clearInterval(t);
       _announcementTimers.delete(streamerId);
-      console.log(`[Announcements] Fermati timer per streamer_id=${streamerId}`);
+      console.log(`[Announcements] Fermati timer online per streamer_id=${streamerId}`);
+    }
+  }
+
+  // ── Avvia annunci offline ─────────────────────────────────────────────────
+  async _startOfflineAnnouncements(streamerId) {
+    this._stopOfflineAnnouncements(streamerId);
+    try {
+      const { rows: anns } = await pool.query(
+        `SELECT a.id, a.interval_offline_minutes,
+                COALESCE(
+                  json_agg(m.message ORDER BY m.sort_order) FILTER (WHERE m.id IS NOT NULL),
+                  '[]'::json
+                ) AS messages
+         FROM bot_announcements a
+         LEFT JOIN bot_announcement_messages m ON m.announcement_id = a.id
+         WHERE a.streamer_id = $1 AND a.active = TRUE AND a.interval_offline_minutes > 0
+         GROUP BY a.id`,
+        [streamerId]
+      );
+      if (anns.length === 0) return;
+      const streamer = Object.values(this.channelMap).find(s => s.streamer_id === streamerId);
+      if (!streamer) return;
+      const channel = '#' + streamer.twitch_username.toLowerCase();
+
+      const timers = anns.map(ann => {
+        const msgs = (ann.messages ?? []).filter(Boolean);
+        if (msgs.length === 0) return null;
+        const ms = Math.max(60_000, (ann.interval_offline_minutes || 30) * 60_000);
+        return setInterval(async () => {
+          if (!this.connected) return;
+          const key = `offline:${ann.id}`;
+          const idx = (_announcementIndexes.get(key) ?? 0) % msgs.length;
+          _announcementIndexes.set(key, idx + 1);
+          const text = substituteVars(msgs[idx], { channel: streamer.twitch_username });
+          try { await this.client.say(channel, text); } catch {}
+        }, ms);
+      }).filter(Boolean);
+
+      if (timers.length > 0) {
+        _offlineAnnouncementTimers.set(streamerId, timers);
+        console.log(`[Announcements] Avviati ${timers.length} timer offline per streamer_id=${streamerId}`);
+      }
+    } catch (e) {
+      console.warn('[Announcements] _startOfflineAnnouncements:', e.message);
+    }
+  }
+
+  // ── Ferma annunci offline ─────────────────────────────────────────────────
+  _stopOfflineAnnouncements(streamerId) {
+    const timers = _offlineAnnouncementTimers.get(streamerId);
+    if (timers) {
+      for (const t of timers) clearInterval(t);
+      _offlineAnnouncementTimers.delete(streamerId);
     }
   }
 
   // ── Comandi DB personalizzati ─────────────────────────────────────────────
   async _handleDbCommand(channel, tags, streamer, lowerMsg) {
     const streamerId = streamer.streamer_id;
+    const username   = (tags?.username || tags?.['display-name'] || '').toLowerCase();
     const { rows } = await pool.query(
-      'SELECT id, trigger, response, cooldown_seconds, mod_only FROM bot_commands WHERE streamer_id = $1 AND active = TRUE',
+      `SELECT id, trigger, response, global_cooldown_seconds, user_cooldown_seconds,
+              access_level, response_type
+       FROM bot_commands WHERE streamer_id = $1 AND active = TRUE`,
       [streamerId]
     );
     for (const cmd of rows) {
       const t = cmd.trigger.trim().toLowerCase();
       if (lowerMsg !== t && !lowerMsg.startsWith(t + ' ')) continue;
-      if (cmd.mod_only && !isSubVip(tags)) return true;
-      const ck = `${streamerId}:cmd:${cmd.id}`;
-      if (Date.now() - (_cmdCooldowns.get(ck) ?? 0) < cmd.cooldown_seconds * 1000) return true;
-      _cmdCooldowns.set(ck, Date.now());
-      try { await this.client.say(channel, cmd.response.trim()); } catch {}
+
+      if (!checkAccessLevel(tags, cmd.access_level ?? 'everyone')) return true;
+
+      const gck = `${streamerId}:cmd:${cmd.id}`;
+      const gcd = cmd.global_cooldown_seconds ?? 5;
+      if (Date.now() - (_cmdCooldowns.get(gck) ?? 0) < gcd * 1000) return true;
+
+      const uck = `${streamerId}:cmd:${cmd.id}:${username}`;
+      const ucd = cmd.user_cooldown_seconds ?? 15;
+      if (Date.now() - (_userCmdCooldowns.get(uck) ?? 0) < ucd * 1000) return true;
+
+      _cmdCooldowns.set(gck, Date.now());
+      _userCmdCooldowns.set(uck, Date.now());
+
+      const text = substituteVars(cmd.response.trim(), {
+        user:    username,
+        channel: streamer.twitch_username,
+        game:    currentGames.get(streamerId) ?? 'Nessun gioco',
+        uptime:  uptimeString(streamerId),
+      });
+
+      const rt = cmd.response_type ?? 'say';
+      try {
+        await this.client.say(channel, rt === 'reply' ? `@${username} ${text}` : text);
+      } catch {}
       return true;
     }
     return false;
@@ -1441,7 +1604,7 @@ class BotManager {
   // ── Template comandi predefiniti ──────────────────────────────────────────
   async _handleTemplateCommand(channel, tags, streamer, lowerMsg) {
     const streamerId = streamer.streamer_id;
-    const TRIGGERS   = ['!uptime', '!game', '!title', '!followage', '!social', '!schedule', '!commands'];
+    const TRIGGERS   = ['!uptime', '!game', '!title', '!followage', '!social', '!schedule', '!commands', '!clip'];
     const trigger    = TRIGGERS.find(t => lowerMsg === t || lowerMsg.startsWith(t + ' '));
     if (!trigger) return false;
 
@@ -1539,6 +1702,25 @@ class BotManager {
           .map(c => c.trigger.trim().toLowerCase());
         const all = [...new Set([...legacyCmds, ...dbCmds.map(r => r.trigger)])].sort();
         reply = all.length > 0 ? `Comandi: ${all.join(', ')}` : 'Nessun comando personalizzato.';
+      }
+      } else if (tname === 'clip') {
+        const caller = (tags?.username || tags?.['display-name'] || '').toLowerCase();
+        try {
+          const userToken = await getStreamerToken(streamer.streamer_id, streamer.twitch_username);
+          const cid = process.env.TWITCH_CLIENT_ID;
+          if (!userToken || !cid || !streamer.twitch_id) throw new Error('token non disponibile');
+          const r = await axios.post(
+            `https://api.twitch.tv/helix/clips?broadcaster_id=${encodeURIComponent(streamer.twitch_id)}`,
+            {},
+            { headers: { 'Client-ID': cid, Authorization: `Bearer ${userToken}` } }
+          );
+          const editUrl = r.data?.data?.[0]?.edit_url ?? '';
+          const clipUrl = editUrl ? editUrl.replace(/\/edit$/, '') : '';
+          reply = clipUrl ? `📎 Clip creata! ${clipUrl}` : '📎 Clip in elaborazione!';
+        } catch (e) {
+          console.warn('[Templates][clip]', e.message);
+          reply = caller ? `@${caller} Non è stato possibile creare la clip al momento.` : 'Non è stato possibile creare la clip al momento.';
+        }
       }
       if (reply) await this.client.say(channel, reply).catch(() => {});
     } catch (e) {
@@ -1998,6 +2180,7 @@ class BotManager {
       const q = songQueues.get(streamer.streamer_id);
       if (q) { q.songs = []; q.srCounts = new Map(); }
       currentStreamStartedAt.set(streamer.streamer_id, new Date(event.started_at ?? Date.now()));
+      this._stopOfflineAnnouncements(streamer.streamer_id);
       this._startAnnouncements(streamer.streamer_id).catch(() => {});
       console.log(`[Bot] Stream online: #${streamer.twitch_username} — contatori resettati`);
       if (streamer.twitch_id && process.env.TWITCH_CLIENT_ID) {
@@ -2029,6 +2212,7 @@ class BotManager {
       currentGames.set(streamer.streamer_id, null);
       currentStreamStartedAt.delete(streamer.streamer_id);
       this._stopAnnouncements(streamer.streamer_id);
+      this._startOfflineAnnouncements(streamer.streamer_id).catch(() => {});
       channelHistory.delete(streamer.streamer_id);
       lurkSessionUsers.delete(streamer.streamer_id);
       sessionActiveUsers.delete(streamer.streamer_id);

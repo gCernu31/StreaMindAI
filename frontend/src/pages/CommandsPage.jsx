@@ -1,40 +1,62 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { getToken } from '../utils/auth.js';
 
 const TABS = ['Comandi', 'Template', 'Annunci', 'Contatori', 'Emote'];
 
-const CARD  = { backgroundColor: '#111', border: '1px solid #262626', borderRadius: '12px', padding: '20px' };
-const INPUT = 'w-full bg-hally-bg border border-hally-border rounded-lg px-3.5 py-2.5 text-sm text-hally-text placeholder-hally-text-muted focus:outline-none focus:border-purple-500 transition-colors';
-const BTN_PRIMARY   = { backgroundColor: '#8B5CF6', color: '#fff', border: 'none', borderRadius: '10px', padding: '8px 18px', fontSize: '13px', fontWeight: 600, cursor: 'pointer' };
-const BTN_SECONDARY = { backgroundColor: 'transparent', color: '#6b6b6b', border: '1px solid #2a2a2a', borderRadius: '10px', padding: '8px 14px', fontSize: '13px', fontWeight: 500, cursor: 'pointer' };
-const BTN_DANGER    = { backgroundColor: 'transparent', color: '#f87171', border: '1px solid rgba(248,113,113,0.25)', borderRadius: '8px', padding: '5px 11px', fontSize: '12px', cursor: 'pointer' };
-
 function authHeaders() {
-  const token = getToken();
-  return { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` };
+  return { 'Content-Type': 'application/json', Authorization: `Bearer ${getToken()}` };
 }
 
-// ─── Toggle ───────────────────────────────────────────────────────────────────
+// ─── Stili condivisi ─────────────────────────────────────────────────────────
 
-function Toggle({ value, onChange }) {
+const CARD    = { backgroundColor: '#111', border: '1px solid #262626', borderRadius: 12, padding: 20 };
+const INPUT   = 'w-full bg-hally-bg border border-hally-border rounded-lg px-3 py-2 text-sm text-hally-text placeholder-hally-text-muted focus:outline-none focus:border-purple-500 transition-colors';
+const SELECT  = 'bg-hally-bg border border-hally-border rounded-lg px-3 py-2 text-sm text-hally-text focus:outline-none focus:border-purple-500';
+const BTN_PRI = { backgroundColor: '#8B5CF6', color: '#fff', border: 'none', borderRadius: 8, padding: '7px 16px', fontSize: 13, fontWeight: 600, cursor: 'pointer' };
+const BTN_SEC = { backgroundColor: 'transparent', color: '#6b6b6b', border: '1px solid #2a2a2a', borderRadius: 8, padding: '7px 12px', fontSize: 13, fontWeight: 500, cursor: 'pointer' };
+const BTN_DEL = { backgroundColor: 'transparent', color: '#f87171', border: '1px solid rgba(248,113,113,0.2)', borderRadius: 7, padding: '4px 10px', fontSize: 12, cursor: 'pointer' };
+
+// ─── Piccoli widget ───────────────────────────────────────────────────────────
+
+function Toggle({ value, onChange, disabled = false }) {
   return (
     <button
-      onClick={() => onChange(!value)}
-      className="shrink-0"
+      onClick={() => !disabled && onChange(!value)}
       style={{
-        width: 36, height: 20, borderRadius: 10, border: 'none', cursor: 'pointer', padding: 0,
-        backgroundColor: value ? '#8B5CF6' : '#333', transition: 'background-color 0.2s', position: 'relative',
+        width: 34, height: 19, borderRadius: 10, border: 'none', padding: 0,
+        backgroundColor: value ? '#8B5CF6' : '#333',
+        cursor: disabled ? 'default' : 'pointer',
+        position: 'relative', flexShrink: 0, transition: 'background-color .15s',
       }}
     >
       <span style={{
-        display: 'block', width: 14, height: 14, borderRadius: '50%', backgroundColor: '#fff',
-        position: 'absolute', top: 3, left: value ? 19 : 3, transition: 'left 0.2s',
+        display: 'block', width: 13, height: 13, borderRadius: '50%', backgroundColor: '#fff',
+        position: 'absolute', top: 3, left: value ? 18 : 3, transition: 'left .15s',
       }} />
     </button>
   );
 }
 
-// ─── Empty state ──────────────────────────────────────────────────────────────
+const ACCESS_OPTS = [
+  { value: 'everyone',    label: 'Everyone' },
+  { value: 'subscriber',  label: 'Subscriber' },
+  { value: 'vip',         label: 'VIP' },
+  { value: 'moderator',   label: 'Moderator' },
+  { value: 'broadcaster', label: 'Broadcaster' },
+];
+
+const ACCESS_COLOR = {
+  everyone: '#6b7280', subscriber: '#8B5CF6', vip: '#a855f7',
+  moderator: '#6366f1', broadcaster: '#f59e0b',
+};
+
+function AccessBadge({ level }) {
+  return (
+    <span className="text-xs px-1.5 py-0.5 rounded font-medium" style={{ color: ACCESS_COLOR[level] ?? '#6b7280', backgroundColor: `${ACCESS_COLOR[level] ?? '#6b7280'}18` }}>
+      {ACCESS_OPTS.find(o => o.value === level)?.label ?? level}
+    </span>
+  );
+}
 
 function Empty({ icon, text }) {
   return (
@@ -45,154 +67,197 @@ function Empty({ icon, text }) {
   );
 }
 
-// ─── Modal ────────────────────────────────────────────────────────────────────
+// ─── TAB: Comandi personalizzati ─────────────────────────────────────────────
 
-function Modal({ title, onClose, children }) {
-  return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4"
-      style={{ backgroundColor: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(4px)' }}
-      onClick={e => { if (e.target === e.currentTarget) onClose(); }}
-    >
-      <div className="w-full max-w-md rounded-2xl border p-6" style={{ backgroundColor: '#111', borderColor: '#262626' }}>
-        <div className="flex items-center justify-between mb-5">
-          <h3 className="text-base font-bold text-hally-text">{title}</h3>
-          <button onClick={onClose} className="text-hally-text-muted hover:text-hally-text w-8 h-8 flex items-center justify-center rounded-lg hover:bg-hally-bg-hover transition-colors" style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 18 }}>✕</button>
-        </div>
-        {children}
-      </div>
-    </div>
-  );
-}
-
-// ─── TAB: Comandi ─────────────────────────────────────────────────────────────
+const CMD_BLANK = { trigger: '', response: '', global_cooldown_seconds: 5, user_cooldown_seconds: 15, access_level: 'everyone', response_type: 'say' };
 
 function TabComandi() {
   const [commands, setCommands] = useState([]);
   const [loading,  setLoading]  = useState(true);
-  const [modal,    setModal]    = useState(null); // null | 'add' | {id,...}
+  const [expanded, setExpanded] = useState(null); // null | 'new' | id
+  const [form,     setForm]     = useState(CMD_BLANK);
   const [saving,   setSaving]   = useState(false);
   const [error,    setError]    = useState('');
-  const [form, setForm] = useState({ trigger: '', response: '', cooldown_seconds: 5, mod_only: false });
 
   const load = useCallback(async () => {
     setLoading(true);
-    try {
-      const r = await fetch('/api/commands', { headers: authHeaders() });
-      if (r.ok) setCommands(await r.json());
-    } finally {
-      setLoading(false);
-    }
+    const r = await fetch('/api/commands', { headers: authHeaders() });
+    if (r.ok) setCommands(await r.json());
+    setLoading(false);
   }, []);
 
   useEffect(() => { load(); }, [load]);
 
-  function openAdd() {
-    setForm({ trigger: '', response: '', cooldown_seconds: 5, mod_only: false });
+  function openNew() {
+    setForm(CMD_BLANK);
     setError('');
-    setModal('add');
+    setExpanded('new');
   }
 
   function openEdit(cmd) {
-    setForm({ trigger: cmd.trigger, response: cmd.response, cooldown_seconds: cmd.cooldown_seconds, mod_only: cmd.mod_only });
+    setForm({
+      trigger:                 cmd.trigger,
+      response:                cmd.response,
+      global_cooldown_seconds: cmd.global_cooldown_seconds ?? 5,
+      user_cooldown_seconds:   cmd.user_cooldown_seconds ?? 15,
+      access_level:            cmd.access_level ?? 'everyone',
+      response_type:           cmd.response_type ?? 'say',
+    });
     setError('');
-    setModal(cmd);
+    setExpanded(cmd.id);
   }
+
+  function cancelEdit() { setExpanded(null); setError(''); }
 
   async function save() {
     if (!form.trigger.trim() || !form.response.trim()) { setError('Trigger e risposta obbligatori'); return; }
     setSaving(true); setError('');
     try {
-      const isEdit = modal !== 'add';
-      const r = await fetch(isEdit ? `/api/commands/${modal.id}` : '/api/commands', {
-        method:  isEdit ? 'PUT' : 'POST',
-        headers: authHeaders(),
-        body:    JSON.stringify(form),
+      const isEdit = expanded !== 'new';
+      const r = await fetch(isEdit ? `/api/commands/${expanded}` : '/api/commands', {
+        method: isEdit ? 'PUT' : 'POST', headers: authHeaders(), body: JSON.stringify(form),
       });
       const data = await r.json();
       if (!r.ok) { setError(data.error ?? 'Errore'); return; }
-      setModal(null);
+      setExpanded(null);
       load();
-    } finally {
-      setSaving(false);
-    }
+    } finally { setSaving(false); }
   }
 
   async function toggleActive(cmd) {
     await fetch(`/api/commands/${cmd.id}`, {
-      method: 'PUT', headers: authHeaders(),
-      body: JSON.stringify({ active: !cmd.active }),
+      method: 'PUT', headers: authHeaders(), body: JSON.stringify({ active: !cmd.active }),
     });
-    load();
+    setCommands(cs => cs.map(c => c.id === cmd.id ? { ...c, active: !c.active } : c));
   }
 
   async function del(cmd) {
     if (!confirm(`Eliminare il comando ${cmd.trigger}?`)) return;
     await fetch(`/api/commands/${cmd.id}`, { method: 'DELETE', headers: authHeaders() });
-    load();
+    setCommands(cs => cs.filter(c => c.id !== cmd.id));
   }
+
+  const f = form;
+  const setF = fn => setForm(prev => ({ ...prev, ...fn(prev) }));
+
+  const InlineForm = () => (
+    <div style={{ backgroundColor: '#0d0d0d', border: '1px solid #333', borderRadius: 10, padding: 16, marginTop: 4 }}>
+      <div className="grid gap-3" style={{ gridTemplateColumns: '1fr 1fr' }}>
+        <div>
+          <label className="text-xs font-semibold text-hally-text-muted uppercase tracking-wider block mb-1">Trigger <span style={{ color: '#8B5CF6' }}>*</span></label>
+          <div className="flex items-center gap-0">
+            <span className="text-sm font-mono text-hally-text-muted px-2 py-2 border border-hally-border rounded-l-lg border-r-0" style={{ backgroundColor: '#1a1a1a' }}>!</span>
+            <input
+              className={INPUT + ' rounded-l-none'}
+              placeholder="comando"
+              value={f.trigger.replace(/^!/, '')}
+              onChange={e => setF(() => ({ trigger: '!' + e.target.value.replace(/^!/, '') }))}
+            />
+          </div>
+        </div>
+        <div>
+          <label className="text-xs font-semibold text-hally-text-muted uppercase tracking-wider block mb-1">Tipo risposta</label>
+          <select className={SELECT + ' w-full'} value={f.response_type} onChange={e => setF(() => ({ response_type: e.target.value }))}>
+            <option value="say">Say</option>
+            <option value="reply">Reply (@user)</option>
+          </select>
+        </div>
+        <div>
+          <label className="text-xs font-semibold text-hally-text-muted uppercase tracking-wider block mb-1">User Level</label>
+          <select className={SELECT + ' w-full'} value={f.access_level} onChange={e => setF(() => ({ access_level: e.target.value }))}>
+            {ACCESS_OPTS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+          </select>
+        </div>
+        <div className="flex gap-3">
+          <div className="flex-1">
+            <label className="text-xs font-semibold text-hally-text-muted uppercase tracking-wider block mb-1">Global CD (s)</label>
+            <input type="number" min={0} max={600} className={INPUT} value={f.global_cooldown_seconds} onChange={e => setF(() => ({ global_cooldown_seconds: Number(e.target.value) }))} />
+          </div>
+          <div className="flex-1">
+            <label className="text-xs font-semibold text-hally-text-muted uppercase tracking-wider block mb-1">User CD (s)</label>
+            <input type="number" min={0} max={600} className={INPUT} value={f.user_cooldown_seconds} onChange={e => setF(() => ({ user_cooldown_seconds: Number(e.target.value) }))} />
+          </div>
+        </div>
+      </div>
+      <div className="mt-3">
+        <label className="text-xs font-semibold text-hally-text-muted uppercase tracking-wider block mb-1">
+          Risposta <span style={{ color: '#8B5CF6' }}>*</span>
+          <span className="ml-2 normal-case text-hally-text-muted" style={{ fontWeight: 400, fontSize: 10 }}>
+            Variabili: {'{user}'} {'{game}'} {'{uptime}'} {'{channel}'} {'{random 1-10}'}
+          </span>
+        </label>
+        <textarea
+          rows={3}
+          className={INPUT + ' resize-none'}
+          placeholder="La risposta del bot…"
+          value={f.response}
+          onChange={e => setF(() => ({ response: e.target.value }))}
+        />
+      </div>
+      {error && <p className="text-xs text-red-400 mt-2">{error}</p>}
+      <div className="flex gap-2 mt-3">
+        <button style={BTN_SEC} onClick={cancelEdit}>Annulla</button>
+        <button style={{ ...BTN_PRI, flex: 1 }} onClick={save} disabled={saving}>
+          {saving ? 'Salvataggio…' : 'Salva comando'}
+        </button>
+      </div>
+    </div>
+  );
 
   return (
     <div>
       <div className="flex items-center justify-between mb-4">
-        <p className="text-sm text-hally-text-muted">Comandi personalizzati che il bot risponde in chat.</p>
-        <button style={BTN_PRIMARY} onClick={openAdd}>+ Aggiungi</button>
+        <p className="text-sm text-hally-text-muted">Comandi personalizzati. Le risposte supportano variabili dinamiche.</p>
+        {expanded !== 'new' && <button style={BTN_PRI} onClick={openNew}>+ Aggiungi</button>}
       </div>
 
-      {loading ? (
-        <div className="space-y-2">
-          {[1,2,3].map(i => <div key={i} className="h-14 rounded-xl animate-pulse bg-hally-border" />)}
-        </div>
-      ) : commands.length === 0 ? (
-        <Empty icon="💬" text="Nessun comando personalizzato. Aggiungine uno!" />
-      ) : (
-        <div className="space-y-2">
-          {commands.map(cmd => (
-            <div key={cmd.id} style={CARD} className="flex items-center gap-3">
-              <Toggle value={cmd.active} onChange={() => toggleActive(cmd)} />
-              <div className="flex-1 min-w-0">
-                <span className="text-sm font-mono font-semibold text-hally-text">{cmd.trigger}</span>
-                {cmd.mod_only && <span className="ml-2 text-xs px-1.5 py-0.5 rounded" style={{ backgroundColor: 'rgba(139,92,246,0.15)', color: '#a78bfa' }}>solo mod</span>}
-                <p className="text-xs text-hally-text-muted truncate mt-0.5">{cmd.response}</p>
-              </div>
-              <span className="text-xs text-hally-text-muted shrink-0">{cmd.cooldown_seconds}s</span>
-              <button style={BTN_SECONDARY} onClick={() => openEdit(cmd)}>Modifica</button>
-              <button style={BTN_DANGER} onClick={() => del(cmd)}>✕</button>
-            </div>
-          ))}
-        </div>
-      )}
+      {expanded === 'new' && <InlineForm />}
 
-      {modal && (
-        <Modal title={modal === 'add' ? 'Nuovo Comando' : 'Modifica Comando'} onClose={() => setModal(null)}>
-          <div className="space-y-4">
-            <div>
-              <label className="text-xs font-semibold text-hally-text-muted uppercase tracking-wider block mb-1.5">Trigger <span style={{ color: '#8B5CF6' }}>*</span></label>
-              <input className={INPUT} placeholder="!comando" value={form.trigger} onChange={e => setForm(f => ({ ...f, trigger: e.target.value }))} />
-            </div>
-            <div>
-              <label className="text-xs font-semibold text-hally-text-muted uppercase tracking-wider block mb-1.5">Risposta <span style={{ color: '#8B5CF6' }}>*</span></label>
-              <textarea className={INPUT + ' resize-none'} rows={3} placeholder="La risposta del bot..." value={form.response} onChange={e => setForm(f => ({ ...f, response: e.target.value }))} />
-            </div>
-            <div className="flex gap-4">
-              <div className="flex-1">
-                <label className="text-xs font-semibold text-hally-text-muted uppercase tracking-wider block mb-1.5">Cooldown (sec)</label>
-                <input type="number" min={0} max={600} className={INPUT} value={form.cooldown_seconds} onChange={e => setForm(f => ({ ...f, cooldown_seconds: Number(e.target.value) }))} />
-              </div>
-              <div className="flex items-end gap-2 pb-1">
-                <Toggle value={form.mod_only} onChange={v => setForm(f => ({ ...f, mod_only: v }))} />
-                <span className="text-sm text-hally-text-muted">Solo mod</span>
-              </div>
-            </div>
-            {error && <p className="text-xs text-red-400">{error}</p>}
-            <div className="flex gap-3 pt-1">
-              <button style={BTN_SECONDARY} onClick={() => setModal(null)}>Annulla</button>
-              <button style={{ ...BTN_PRIMARY, flex: 1 }} onClick={save} disabled={saving}>
-                {saving ? 'Salvataggio...' : 'Salva'}
-              </button>
-            </div>
+      {loading ? (
+        <div className="space-y-1 mt-2">{[1,2,3].map(i => <div key={i} className="h-10 rounded-lg animate-pulse bg-hally-border" />)}</div>
+      ) : commands.length === 0 && expanded !== 'new' ? (
+        <Empty icon="💬" text="Nessun comando personalizzato." />
+      ) : (
+        <div className="mt-2">
+          {/* Header */}
+          <div className="hidden md:grid text-xs font-semibold text-hally-text-muted uppercase tracking-wider px-3 pb-1.5" style={{ gridTemplateColumns: '34px 110px 1fr 60px 60px 110px 80px' }}>
+            <span></span><span>Comando</span><span>Risposta</span>
+            <span className="text-center">Global</span><span className="text-center">User</span>
+            <span>Livello</span><span></span>
           </div>
-        </Modal>
+          <div className="space-y-1">
+            {commands.map(cmd => (
+              <div key={cmd.id}>
+                <div
+                  className="md:grid flex flex-wrap items-center gap-2 px-3 py-2 rounded-lg transition-colors"
+                  style={{
+                    gridTemplateColumns: '34px 110px 1fr 60px 60px 110px 80px',
+                    backgroundColor: expanded === cmd.id ? '#1a1a1a' : 'transparent',
+                  }}
+                  onMouseEnter={e => { if (expanded !== cmd.id) e.currentTarget.style.backgroundColor = '#161616'; }}
+                  onMouseLeave={e => { if (expanded !== cmd.id) e.currentTarget.style.backgroundColor = 'transparent'; }}
+                >
+                  <Toggle value={cmd.active} onChange={() => toggleActive(cmd)} />
+                  <span className="text-sm font-mono font-semibold text-hally-text truncate">{cmd.trigger}</span>
+                  <span className="text-xs text-hally-text-muted truncate hidden md:block">{cmd.response}</span>
+                  <span className="text-xs text-center text-hally-text-muted hidden md:block">{cmd.global_cooldown_seconds ?? 5}s</span>
+                  <span className="text-xs text-center text-hally-text-muted hidden md:block">{cmd.user_cooldown_seconds ?? 15}s</span>
+                  <div className="hidden md:flex"><AccessBadge level={cmd.access_level ?? 'everyone'} /></div>
+                  <div className="flex items-center gap-1.5 ml-auto md:ml-0">
+                    <button
+                      style={{ ...BTN_SEC, padding: '4px 10px', fontSize: 12 }}
+                      onClick={() => expanded === cmd.id ? cancelEdit() : openEdit(cmd)}
+                    >
+                      {expanded === cmd.id ? 'Chiudi' : 'Modifica'}
+                    </button>
+                    <button style={BTN_DEL} onClick={() => del(cmd)}>✕</button>
+                  </div>
+                </div>
+                {expanded === cmd.id && <InlineForm />}
+              </div>
+            ))}
+          </div>
+        </div>
       )}
     </div>
   );
@@ -219,42 +284,38 @@ function TabTemplate() {
   async function saveAll() {
     setSaving(true); setSaved(false);
     try {
-      await fetch('/api/commands/templates', {
-        method: 'PUT', headers: authHeaders(),
-        body: JSON.stringify(templates),
-      });
+      await fetch('/api/commands/templates', { method: 'PUT', headers: authHeaders(), body: JSON.stringify(templates) });
       setSaved(true);
       setTimeout(() => setSaved(false), 2000);
-    } finally {
-      setSaving(false);
-    }
+    } finally { setSaving(false); }
   }
 
-  if (loading) return <div className="space-y-2">{[1,2,3,4,5,6,7].map(i => <div key={i} className="h-14 rounded-xl animate-pulse bg-hally-border" />)}</div>;
+  if (loading) return <div className="space-y-2">{[1,2,3,4,5,6,7,8].map(i => <div key={i} className="h-14 rounded-xl animate-pulse bg-hally-border" />)}</div>;
 
   return (
     <div>
       <div className="flex items-center justify-between mb-4">
-        <p className="text-sm text-hally-text-muted">Comandi predefiniti gestiti automaticamente dal bot.</p>
-        <button style={{ ...BTN_PRIMARY, ...(saved ? { backgroundColor: '#10b981' } : {}) }} onClick={saveAll} disabled={saving}>
-          {saving ? 'Salvataggio...' : saved ? '✓ Salvato' : 'Salva tutto'}
+        <p className="text-sm text-hally-text-muted">Comandi predefiniti gestiti automaticamente. Il cooldown di <code className="text-xs">!clip</code> è fisso a 30s.</p>
+        <button style={{ ...BTN_PRI, ...(saved ? { backgroundColor: '#10b981' } : {}) }} onClick={saveAll} disabled={saving}>
+          {saving ? 'Salvataggio…' : saved ? '✓ Salvato' : 'Salva tutto'}
         </button>
       </div>
-      <div className="space-y-2">
+      <div className="space-y-1.5">
         {templates.map(t => (
-          <div key={t.name} style={CARD} className="flex items-center gap-3">
+          <div key={t.name} style={{ backgroundColor: '#161616', border: '1px solid #222', borderRadius: 10, padding: '10px 14px' }} className="flex items-center gap-3">
             <Toggle value={t.enabled} onChange={v => update(t.name, 'enabled', v)} />
             <div className="flex-1 min-w-0">
               <span className="text-sm font-mono font-semibold text-hally-text">!{t.name}</span>
               <p className="text-xs text-hally-text-muted mt-0.5">{t.description}</p>
             </div>
             <div className="shrink-0 flex items-center gap-2">
-              <span className="text-xs text-hally-text-muted">Cooldown</span>
+              <span className="text-xs text-hally-text-muted">CD</span>
               <input
                 type="number" min={5} max={300}
+                disabled={t.fixedCooldown}
                 value={t.cooldown_seconds}
                 onChange={e => update(t.name, 'cooldown_seconds', Number(e.target.value))}
-                style={{ width: 60, backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: 8, padding: '4px 8px', fontSize: 12, color: '#e2e2e2', outline: 'none' }}
+                style={{ width: 56, backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: 7, padding: '4px 8px', fontSize: 12, color: t.fixedCooldown ? '#555' : '#e2e2e2', outline: 'none', cursor: t.fixedCooldown ? 'not-allowed' : 'auto' }}
               />
               <span className="text-xs text-hally-text-muted">s</span>
             </div>
@@ -267,13 +328,18 @@ function TabTemplate() {
 
 // ─── TAB: Annunci ─────────────────────────────────────────────────────────────
 
+const ANN_BLANK = {
+  name: '', messages: [''], interval_minutes: 30, interval_offline_minutes: 0,
+  min_chat_lines: 0, title_keywords: '', game_filter: '',
+};
+
 function TabAnnunci() {
-  const [items,   setItems]  = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [modal,   setModal]  = useState(null);
-  const [saving,  setSaving] = useState(false);
-  const [error,   setError]  = useState('');
-  const [form, setForm] = useState({ message: '', interval_minutes: 30 });
+  const [items,    setItems]    = useState([]);
+  const [loading,  setLoading]  = useState(true);
+  const [expanded, setExpanded] = useState(null);
+  const [form,     setForm]     = useState(ANN_BLANK);
+  const [saving,   setSaving]   = useState(false);
+  const [error,    setError]    = useState('');
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -284,79 +350,178 @@ function TabAnnunci() {
 
   useEffect(() => { load(); }, [load]);
 
-  function openAdd() { setForm({ message: '', interval_minutes: 30 }); setError(''); setModal('add'); }
-  function openEdit(item) { setForm({ message: item.message, interval_minutes: item.interval_minutes }); setError(''); setModal(item); }
+  function openNew() {
+    setForm({ ...ANN_BLANK, messages: [''] });
+    setError('');
+    setExpanded('new');
+  }
+
+  function openEdit(item) {
+    setForm({
+      name:                    item.name ?? '',
+      messages:                item.messages?.length ? item.messages : [''],
+      interval_minutes:        item.interval_minutes ?? 30,
+      interval_offline_minutes: item.interval_offline_minutes ?? 0,
+      min_chat_lines:          item.min_chat_lines ?? 0,
+      title_keywords:          item.title_keywords ?? '',
+      game_filter:             item.game_filter ?? '',
+    });
+    setError('');
+    setExpanded(item.id);
+  }
+
+  function cancelEdit() { setExpanded(null); setError(''); }
+  const setF = fn => setForm(prev => ({ ...prev, ...fn(prev) }));
+
+  // messages helpers
+  function setMsg(idx, val) { setF(f => { const m = [...f.messages]; m[idx] = val; return { messages: m }; }); }
+  function addMsg()          { setF(f => ({ messages: [...f.messages, ''] })); }
+  function removeMsg(idx)    { setF(f => ({ messages: f.messages.filter((_, i) => i !== idx) })); }
+  function moveMsg(idx, dir) {
+    setF(f => {
+      const m = [...f.messages];
+      const swap = idx + dir;
+      if (swap < 0 || swap >= m.length) return {};
+      [m[idx], m[swap]] = [m[swap], m[idx]];
+      return { messages: m };
+    });
+  }
 
   async function save() {
-    if (!form.message.trim()) { setError('Messaggio obbligatorio'); return; }
+    const validMsgs = form.messages.filter(m => m?.trim());
+    if (validMsgs.length === 0) { setError('Almeno un messaggio obbligatorio'); return; }
     setSaving(true); setError('');
     try {
-      const isEdit = modal !== 'add';
-      const r = await fetch(isEdit ? `/api/commands/announcements/${modal.id}` : '/api/commands/announcements', {
-        method: isEdit ? 'PUT' : 'POST', headers: authHeaders(),
-        body: JSON.stringify(form),
+      const isEdit = expanded !== 'new';
+      const payload = { ...form, messages: validMsgs };
+      const r = await fetch(isEdit ? `/api/commands/announcements/${expanded}` : '/api/commands/announcements', {
+        method: isEdit ? 'PUT' : 'POST', headers: authHeaders(), body: JSON.stringify(payload),
       });
       const data = await r.json();
       if (!r.ok) { setError(data.error ?? 'Errore'); return; }
-      setModal(null); load();
+      setExpanded(null);
+      load();
     } finally { setSaving(false); }
   }
 
   async function toggle(item) {
     await fetch(`/api/commands/announcements/${item.id}`, {
-      method: 'PUT', headers: authHeaders(),
-      body: JSON.stringify({ active: !item.active }),
+      method: 'PUT', headers: authHeaders(), body: JSON.stringify({ active: !item.active }),
     });
-    load();
+    setItems(is => is.map(i => i.id === item.id ? { ...i, active: !i.active } : i));
   }
 
   async function del(item) {
     if (!confirm('Eliminare questo annuncio?')) return;
     await fetch(`/api/commands/announcements/${item.id}`, { method: 'DELETE', headers: authHeaders() });
-    load();
+    setItems(is => is.filter(i => i.id !== item.id));
   }
+
+  const f = form;
+
+  const AnnForm = () => (
+    <div style={{ backgroundColor: '#0d0d0d', border: '1px solid #333', borderRadius: 10, padding: 16, marginTop: 4 }}>
+      <div className="grid gap-3" style={{ gridTemplateColumns: '1fr 1fr' }}>
+        <div style={{ gridColumn: '1/-1' }}>
+          <label className="text-xs font-semibold text-hally-text-muted uppercase tracking-wider block mb-1">Nome timer</label>
+          <input className={INPUT} placeholder="es. Social reminder" value={f.name} onChange={e => setF(() => ({ name: e.target.value }))} />
+        </div>
+        <div>
+          <label className="text-xs font-semibold text-hally-text-muted uppercase tracking-wider block mb-1">Intervallo online (min)</label>
+          <input type="number" min={1} max={180} className={INPUT} value={f.interval_minutes} onChange={e => setF(() => ({ interval_minutes: Number(e.target.value) }))} />
+        </div>
+        <div>
+          <label className="text-xs font-semibold text-hally-text-muted uppercase tracking-wider block mb-1">Intervallo offline (min, 0=disattivo)</label>
+          <input type="number" min={0} max={180} className={INPUT} value={f.interval_offline_minutes} onChange={e => setF(() => ({ interval_offline_minutes: Number(e.target.value) }))} />
+        </div>
+        <div>
+          <label className="text-xs font-semibold text-hally-text-muted uppercase tracking-wider block mb-1">Chat lines minime (5 min)</label>
+          <input type="number" min={0} max={500} className={INPUT} value={f.min_chat_lines} onChange={e => setF(() => ({ min_chat_lines: Number(e.target.value) }))} />
+          <p className="text-xs text-hally-text-muted mt-1">0 = invia sempre</p>
+        </div>
+        <div>
+          <label className="text-xs font-semibold text-hally-text-muted uppercase tracking-wider block mb-1">Filtro giochi (virgola)</label>
+          <input className={INPUT} placeholder="Minecraft, GTA V" value={f.game_filter} onChange={e => setF(() => ({ game_filter: e.target.value }))} />
+        </div>
+        <div style={{ gridColumn: '1/-1' }}>
+          <label className="text-xs font-semibold text-hally-text-muted uppercase tracking-wider block mb-1">Messaggi in rotazione <span style={{ color: '#8B5CF6' }}>*</span></label>
+          <p className="text-xs text-hally-text-muted mb-2">I messaggi vengono inviati in sequenza ad ogni ciclo. Variabili: <code className="text-xs">{'{channel}'} {'{game}'} {'{uptime}'}</code></p>
+          <div className="space-y-1.5">
+            {f.messages.map((msg, idx) => (
+              <div key={idx} className="flex items-start gap-1.5">
+                <div className="flex flex-col gap-0.5 pt-1 shrink-0">
+                  <button disabled={idx === 0} onClick={() => moveMsg(idx, -1)} style={{ background: 'none', border: 'none', color: idx === 0 ? '#333' : '#666', cursor: idx === 0 ? 'default' : 'pointer', lineHeight: 1, padding: '2px 4px' }}>▲</button>
+                  <button disabled={idx === f.messages.length - 1} onClick={() => moveMsg(idx, 1)} style={{ background: 'none', border: 'none', color: idx === f.messages.length - 1 ? '#333' : '#666', cursor: idx === f.messages.length - 1 ? 'default' : 'pointer', lineHeight: 1, padding: '2px 4px' }}>▼</button>
+                </div>
+                <span className="text-xs text-hally-text-muted pt-2.5 shrink-0 w-4 text-right">{idx + 1}.</span>
+                <textarea
+                  rows={2}
+                  className={INPUT + ' resize-none flex-1'}
+                  placeholder={`Messaggio ${idx + 1}…`}
+                  value={msg}
+                  onChange={e => setMsg(idx, e.target.value)}
+                />
+                {f.messages.length > 1 && (
+                  <button onClick={() => removeMsg(idx)} style={{ ...BTN_DEL, flexShrink: 0, marginTop: 2 }}>✕</button>
+                )}
+              </div>
+            ))}
+          </div>
+          <button style={{ ...BTN_SEC, marginTop: 8, fontSize: 12 }} onClick={addMsg}>+ Aggiungi messaggio</button>
+        </div>
+      </div>
+      {error && <p className="text-xs text-red-400 mt-2">{error}</p>}
+      <div className="flex gap-2 mt-4">
+        <button style={BTN_SEC} onClick={cancelEdit}>Annulla</button>
+        <button style={{ ...BTN_PRI, flex: 1 }} onClick={save} disabled={saving}>
+          {saving ? 'Salvataggio…' : 'Attiva Timer'}
+        </button>
+      </div>
+    </div>
+  );
 
   return (
     <div>
       <div className="flex items-center justify-between mb-4">
-        <p className="text-sm text-hally-text-muted">Messaggi inviati automaticamente durante la live a intervalli regolari.</p>
-        <button style={BTN_PRIMARY} onClick={openAdd}>+ Aggiungi</button>
+        <p className="text-sm text-hally-text-muted">Messaggi inviati automaticamente in chat a intervalli regolari con rotazione.</p>
+        {expanded !== 'new' && <button style={BTN_PRI} onClick={openNew}>+ Aggiungi</button>}
       </div>
-      {loading ? <div className="space-y-2">{[1,2].map(i => <div key={i} className="h-14 rounded-xl animate-pulse bg-hally-border" />)}</div>
-       : items.length === 0 ? <Empty icon="📢" text="Nessun annuncio configurato." />
-       : (
-        <div className="space-y-2">
+
+      {expanded === 'new' && <AnnForm />}
+
+      {loading ? (
+        <div className="space-y-1 mt-2">{[1,2].map(i => <div key={i} className="h-12 rounded-lg animate-pulse bg-hally-border" />)}</div>
+      ) : items.length === 0 && expanded !== 'new' ? (
+        <Empty icon="📢" text="Nessun annuncio configurato." />
+      ) : (
+        <div className="space-y-1 mt-2">
           {items.map(item => (
-            <div key={item.id} style={CARD} className="flex items-center gap-3">
-              <Toggle value={item.active} onChange={() => toggle(item)} />
-              <div className="flex-1 min-w-0">
-                <p className="text-sm text-hally-text truncate">{item.message}</p>
-                <p className="text-xs text-hally-text-muted mt-0.5">ogni {item.interval_minutes} minuti</p>
+            <div key={item.id}>
+              <div
+                className="flex items-center gap-3 px-3 py-2 rounded-lg transition-colors"
+                style={{ backgroundColor: expanded === item.id ? '#1a1a1a' : 'transparent' }}
+                onMouseEnter={e => { if (expanded !== item.id) e.currentTarget.style.backgroundColor = '#161616'; }}
+                onMouseLeave={e => { if (expanded !== item.id) e.currentTarget.style.backgroundColor = 'transparent'; }}
+              >
+                <Toggle value={item.active} onChange={() => toggle(item)} />
+                <div className="flex-1 min-w-0">
+                  <span className="text-sm font-medium text-hally-text">{item.name || (item.messages?.[0] ? item.messages[0].slice(0, 50) : '…')}</span>
+                  <p className="text-xs text-hally-text-muted mt-0.5">
+                    {item.interval_minutes}min online
+                    {item.interval_offline_minutes > 0 ? ` · ${item.interval_offline_minutes}min offline` : ''}
+                    {item.min_chat_lines > 0 ? ` · min ${item.min_chat_lines} msgs` : ''}
+                    {item.messages?.length > 1 ? ` · ${item.messages.length} messaggi` : ''}
+                  </p>
+                </div>
+                <button style={{ ...BTN_SEC, fontSize: 12, padding: '4px 10px' }} onClick={() => expanded === item.id ? cancelEdit() : openEdit(item)}>
+                  {expanded === item.id ? 'Chiudi' : 'Modifica'}
+                </button>
+                <button style={BTN_DEL} onClick={() => del(item)}>✕</button>
               </div>
-              <button style={BTN_SECONDARY} onClick={() => openEdit(item)}>Modifica</button>
-              <button style={BTN_DANGER} onClick={() => del(item)}>✕</button>
+              {expanded === item.id && <AnnForm />}
             </div>
           ))}
         </div>
-      )}
-      {modal && (
-        <Modal title={modal === 'add' ? 'Nuovo Annuncio' : 'Modifica Annuncio'} onClose={() => setModal(null)}>
-          <div className="space-y-4">
-            <div>
-              <label className="text-xs font-semibold text-hally-text-muted uppercase tracking-wider block mb-1.5">Messaggio <span style={{ color: '#8B5CF6' }}>*</span></label>
-              <textarea className={INPUT + ' resize-none'} rows={3} placeholder="es. Seguite il mio Twitch e lasciate un follow! 💜" value={form.message} onChange={e => setForm(f => ({ ...f, message: e.target.value }))} />
-            </div>
-            <div>
-              <label className="text-xs font-semibold text-hally-text-muted uppercase tracking-wider block mb-1.5">Intervallo (minuti, 5–120)</label>
-              <input type="number" min={5} max={120} className={INPUT} value={form.interval_minutes} onChange={e => setForm(f => ({ ...f, interval_minutes: Number(e.target.value) }))} />
-            </div>
-            {error && <p className="text-xs text-red-400">{error}</p>}
-            <div className="flex gap-3 pt-1">
-              <button style={BTN_SECONDARY} onClick={() => setModal(null)}>Annulla</button>
-              <button style={{ ...BTN_PRIMARY, flex: 1 }} onClick={save} disabled={saving}>{saving ? 'Salvataggio...' : 'Salva'}</button>
-            </div>
-          </div>
-        </Modal>
       )}
     </div>
   );
@@ -381,8 +546,8 @@ function TabContatori() {
 
   useEffect(() => { load(); }, [load]);
 
-  function openAdd() { setForm({ name: '', trigger: '', value: 0 }); setError(''); setModal('add'); }
-  function openEdit(item) { setForm({ name: item.name, trigger: item.trigger, value: item.value }); setError(''); setModal(item); }
+  function openAdd()    { setForm({ name: '', trigger: '', value: 0 }); setError(''); setModal('add'); }
+  function openEdit(i)  { setForm({ name: i.name, trigger: i.trigger, value: i.value }); setError(''); setModal(i); }
 
   async function save() {
     if (!form.name.trim() || !form.trigger.trim()) { setError('Nome e trigger obbligatori'); return; }
@@ -390,8 +555,7 @@ function TabContatori() {
     try {
       const isEdit = modal !== 'add';
       const r = await fetch(isEdit ? `/api/commands/counters/${modal.id}` : '/api/commands/counters', {
-        method: isEdit ? 'PUT' : 'POST', headers: authHeaders(),
-        body: JSON.stringify(form),
+        method: isEdit ? 'PUT' : 'POST', headers: authHeaders(), body: JSON.stringify(form),
       });
       const data = await r.json();
       if (!r.ok) { setError(data.error ?? 'Errore'); return; }
@@ -399,78 +563,71 @@ function TabContatori() {
     } finally { setSaving(false); }
   }
 
-  async function reset(item) {
-    await fetch(`/api/commands/counters/${item.id}`, {
-      method: 'PUT', headers: authHeaders(),
-      body: JSON.stringify({ value: 0 }),
-    });
-    load();
+  async function resetCounter(item) {
+    await fetch(`/api/commands/counters/${item.id}`, { method: 'PUT', headers: authHeaders(), body: JSON.stringify({ value: 0 }) });
+    setItems(is => is.map(i => i.id === item.id ? { ...i, value: 0 } : i));
   }
 
   async function toggle(item) {
-    await fetch(`/api/commands/counters/${item.id}`, {
-      method: 'PUT', headers: authHeaders(),
-      body: JSON.stringify({ active: !item.active }),
-    });
-    load();
+    await fetch(`/api/commands/counters/${item.id}`, { method: 'PUT', headers: authHeaders(), body: JSON.stringify({ active: !item.active }) });
+    setItems(is => is.map(i => i.id === item.id ? { ...i, active: !i.active } : i));
   }
 
   async function del(item) {
-    if (!confirm(`Eliminare il contatore ${item.name}?`)) return;
+    if (!confirm(`Eliminare ${item.name}?`)) return;
     await fetch(`/api/commands/counters/${item.id}`, { method: 'DELETE', headers: authHeaders() });
-    load();
+    setItems(is => is.filter(i => i.id !== item.id));
   }
 
   return (
     <div>
       <div className="flex items-center justify-between mb-4">
-        <p className="text-sm text-hally-text-muted">Contatori incrementabili in chat. Usa <code className="text-xs">!trigger +</code> per incrementare.</p>
-        <button style={BTN_PRIMARY} onClick={openAdd}>+ Aggiungi</button>
+        <p className="text-sm text-hally-text-muted">Contatori in chat. <code className="text-xs">!trigger</code> per vedere, <code className="text-xs">!trigger +</code> per incrementare (tutti), <code className="text-xs">!trigger reset</code> per azzerare (mod).</p>
+        <button style={BTN_PRI} onClick={openAdd}>+ Aggiungi</button>
       </div>
-      {loading ? <div className="space-y-2">{[1,2].map(i => <div key={i} className="h-14 rounded-xl animate-pulse bg-hally-border" />)}</div>
-       : items.length === 0 ? <Empty icon="🔢" text="Nessun contatore configurato." />
-       : (
-        <div className="space-y-2">
+      {loading ? <div className="space-y-1">{[1,2].map(i => <div key={i} className="h-10 rounded-lg animate-pulse bg-hally-border" />)}</div>
+        : items.length === 0 ? <Empty icon="🔢" text="Nessun contatore configurato." />
+        : (
+        <div className="space-y-1">
           {items.map(item => (
-            <div key={item.id} style={CARD} className="flex items-center gap-3">
+            <div key={item.id} className="flex items-center gap-3 px-3 py-2 rounded-lg" style={{ backgroundColor: '#161616', border: '1px solid #222' }}>
               <Toggle value={item.active} onChange={() => toggle(item)} />
-              <div className="flex-1 min-w-0">
-                <span className="text-sm font-semibold text-hally-text">{item.name}</span>
-                <span className="ml-2 text-xs font-mono text-hally-text-muted">{item.trigger}</span>
-              </div>
-              <div className="flex items-center gap-2 shrink-0">
-                <span className="text-2xl font-bold" style={{ color: '#8B5CF6' }}>{item.value}</span>
-                <button style={{ ...BTN_SECONDARY, fontSize: 11, padding: '4px 10px' }} onClick={() => reset(item)}>Reset</button>
-              </div>
-              <button style={BTN_SECONDARY} onClick={() => openEdit(item)}>Modifica</button>
-              <button style={BTN_DANGER} onClick={() => del(item)}>✕</button>
+              <span className="text-sm font-semibold text-hally-text flex-1">{item.name}</span>
+              <span className="text-xs font-mono text-hally-text-muted">{item.trigger}</span>
+              <span className="text-xl font-bold" style={{ color: '#8B5CF6', minWidth: 32, textAlign: 'center' }}>{item.value}</span>
+              <button style={{ ...BTN_SEC, fontSize: 11, padding: '3px 9px' }} onClick={() => resetCounter(item)}>Reset</button>
+              <button style={{ ...BTN_SEC, fontSize: 11, padding: '3px 9px' }} onClick={() => openEdit(item)}>Modifica</button>
+              <button style={BTN_DEL} onClick={() => del(item)}>✕</button>
             </div>
           ))}
         </div>
       )}
+
       {modal && (
-        <Modal title={modal === 'add' ? 'Nuovo Contatore' : 'Modifica Contatore'} onClose={() => setModal(null)}>
-          <div className="space-y-4">
-            <div>
-              <label className="text-xs font-semibold text-hally-text-muted uppercase tracking-wider block mb-1.5">Nome</label>
-              <input className={INPUT} placeholder="es. Morti, Punti, Caffè" value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} />
-            </div>
-            <div>
-              <label className="text-xs font-semibold text-hally-text-muted uppercase tracking-wider block mb-1.5">Trigger</label>
-              <input className={INPUT} placeholder="!morti" value={form.trigger} onChange={e => setForm(f => ({ ...f, trigger: e.target.value }))} />
-              <p className="text-xs text-hally-text-muted mt-1">In chat: <code>!morti</code> per vedere, <code>!morti +</code> per incrementare, <code>!morti reset</code> per azzerare (mod)</p>
-            </div>
-            <div>
-              <label className="text-xs font-semibold text-hally-text-muted uppercase tracking-wider block mb-1.5">Valore iniziale</label>
-              <input type="number" className={INPUT} value={form.value} onChange={e => setForm(f => ({ ...f, value: Number(e.target.value) }))} />
-            </div>
-            {error && <p className="text-xs text-red-400">{error}</p>}
-            <div className="flex gap-3 pt-1">
-              <button style={BTN_SECONDARY} onClick={() => setModal(null)}>Annulla</button>
-              <button style={{ ...BTN_PRIMARY, flex: 1 }} onClick={save} disabled={saving}>{saving ? 'Salvataggio...' : 'Salva'}</button>
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(4px)' }} onClick={e => { if (e.target === e.currentTarget) setModal(null); }}>
+          <div className="w-full max-w-sm rounded-2xl border p-6" style={{ backgroundColor: '#111', borderColor: '#262626' }}>
+            <h3 className="text-base font-bold text-hally-text mb-4">{modal === 'add' ? 'Nuovo Contatore' : 'Modifica Contatore'}</h3>
+            <div className="space-y-3">
+              <div>
+                <label className="text-xs font-semibold text-hally-text-muted uppercase tracking-wider block mb-1">Nome</label>
+                <input className={INPUT} placeholder="es. Morti" value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} />
+              </div>
+              <div>
+                <label className="text-xs font-semibold text-hally-text-muted uppercase tracking-wider block mb-1">Trigger</label>
+                <input className={INPUT} placeholder="!morti" value={form.trigger} onChange={e => setForm(f => ({ ...f, trigger: e.target.value }))} />
+              </div>
+              <div>
+                <label className="text-xs font-semibold text-hally-text-muted uppercase tracking-wider block mb-1">Valore iniziale</label>
+                <input type="number" className={INPUT} value={form.value} onChange={e => setForm(f => ({ ...f, value: Number(e.target.value) }))} />
+              </div>
+              {error && <p className="text-xs text-red-400">{error}</p>}
+              <div className="flex gap-2 pt-1">
+                <button style={BTN_SEC} onClick={() => setModal(null)}>Annulla</button>
+                <button style={{ ...BTN_PRI, flex: 1 }} onClick={save} disabled={saving}>{saving ? 'Salvataggio…' : 'Salva'}</button>
+              </div>
             </div>
           </div>
-        </Modal>
+        </div>
       )}
     </div>
   );
@@ -479,7 +636,6 @@ function TabContatori() {
 // ─── TAB: Emote ───────────────────────────────────────────────────────────────
 
 function TabEmote() {
-  // rows: [{emote_name, description, fromTwitch?}]
   const [rows,    setRows]    = useState([]);
   const [loading, setLoading] = useState(true);
   const [saving,  setSaving]  = useState(false);
@@ -492,20 +648,9 @@ function TabEmote() {
     ]).then(([saved, twitch]) => {
       const descMap = Object.fromEntries(saved.map(e => [e.emote_name, e.description]));
       if (twitch.length > 0) {
-        // Mostra tutte le emote Twitch con descrizione opzionale pre-compilata
-        const merged = twitch.map(te => ({
-          emote_name:  te.name,
-          description: descMap[te.name] ?? '',
-          fromTwitch:  true,
-          emote_type:  te.emote_type,
-        }));
-        // Aggiungi eventuali emote manuali non presenti in Twitch
+        const merged = twitch.map(te => ({ emote_name: te.name, description: descMap[te.name] ?? '', fromTwitch: true, emote_type: te.emote_type }));
         const twitchNames = new Set(twitch.map(t => t.name));
-        for (const s of saved) {
-          if (!twitchNames.has(s.emote_name)) {
-            merged.push({ emote_name: s.emote_name, description: s.description, fromTwitch: false });
-          }
-        }
+        for (const s of saved) if (!twitchNames.has(s.emote_name)) merged.push({ emote_name: s.emote_name, description: s.description, fromTwitch: false });
         setRows(merged);
       } else if (saved.length > 0) {
         setRows(saved.map(e => ({ ...e, fromTwitch: false })));
@@ -516,98 +661,53 @@ function TabEmote() {
     });
   }, []);
 
-  function updateDesc(idx, val) {
-    setRows(rs => rs.map((r, i) => i === idx ? { ...r, description: val } : r));
-  }
-  function updateName(idx, val) {
-    setRows(rs => rs.map((r, i) => i === idx ? { ...r, emote_name: val } : r));
-  }
-  function addRow() { setRows(rs => [...rs, { emote_name: '', description: '', fromTwitch: false }]); }
+  function updateDesc(idx, val) { setRows(rs => rs.map((r, i) => i === idx ? { ...r, description: val } : r)); }
+  function updateName(idx, val) { setRows(rs => rs.map((r, i) => i === idx ? { ...r, emote_name: val } : r)); }
+  function addRow()    { setRows(rs => [...rs, { emote_name: '', description: '', fromTwitch: false }]); }
   function removeRow(idx) { setRows(rs => rs.filter((_, i) => i !== idx)); }
 
   async function saveAll() {
     setSaving(true); setSaved(false);
     try {
       const valid = rows.filter(r => r.emote_name?.trim() && r.description?.trim());
-      await fetch('/api/commands/emotes', {
-        method: 'PUT', headers: authHeaders(),
-        body: JSON.stringify(valid.map(r => ({ emote_name: r.emote_name, description: r.description }))),
-      });
+      await fetch('/api/commands/emotes', { method: 'PUT', headers: authHeaders(), body: JSON.stringify(valid.map(r => ({ emote_name: r.emote_name, description: r.description }))) });
       setSaved(true);
       setTimeout(() => setSaved(false), 2000);
-    } finally {
-      setSaving(false);
-    }
+    } finally { setSaving(false); }
   }
 
   const typeLabel = { subscriptions: 'sub', bitstiers: 'bits', follower: 'follower' };
 
-  if (loading) return <div className="space-y-2">{[1,2,3,4].map(i => <div key={i} className="h-12 rounded-xl animate-pulse bg-hally-border" />)}</div>;
+  if (loading) return <div className="space-y-2">{[1,2,3,4].map(i => <div key={i} className="h-10 rounded-xl animate-pulse bg-hally-border" />)}</div>;
 
   const hasTwitch = rows.some(r => r.fromTwitch);
-
   return (
     <div>
       <div className="flex items-start justify-between mb-4 gap-4">
-        <div>
-          <p className="text-sm text-hally-text-muted">
-            {hasTwitch
-              ? 'Emote del canale caricate automaticamente da Twitch. Aggiungi una descrizione per aiutare il bot AI a capirne il significato.'
-              : 'Descrivi le emote del canale per aiutare il bot AI a capirne il significato.'}
-          </p>
-          {hasTwitch && (
-            <p className="text-xs mt-1" style={{ color: '#6b6b6b' }}>
-              La descrizione è opzionale — vengono salvate solo le emote con descrizione compilata.
-            </p>
-          )}
-        </div>
-        <button
-          style={{ ...BTN_PRIMARY, flexShrink: 0, ...(saved ? { backgroundColor: '#10b981' } : {}) }}
-          onClick={saveAll}
-          disabled={saving}
-        >
-          {saving ? 'Salvataggio...' : saved ? '✓ Salvato' : 'Salva'}
+        <p className="text-sm text-hally-text-muted">
+          {hasTwitch ? 'Emote caricate da Twitch. La descrizione aiuta il bot AI a capirne il significato.' : 'Descrivi le emote del canale per il bot AI.'}
+        </p>
+        <button style={{ ...BTN_PRI, flexShrink: 0, ...(saved ? { backgroundColor: '#10b981' } : {}) }} onClick={saveAll} disabled={saving}>
+          {saving ? 'Salvataggio…' : saved ? '✓ Salvato' : 'Salva'}
         </button>
       </div>
-
-      <div className="space-y-2">
+      <div className="space-y-1.5">
         {rows.map((row, idx) => (
           <div key={idx} className="flex items-center gap-2">
             {row.fromTwitch ? (
-              <div
-                className="flex items-center gap-1.5 shrink-0"
-                style={{ width: 150, backgroundColor: '#1a1a1a', border: '1px solid #2a2a2a', borderRadius: 8, padding: '8px 10px' }}
-              >
+              <div className="flex items-center gap-1.5 shrink-0" style={{ width: 140, backgroundColor: '#1a1a1a', border: '1px solid #2a2a2a', borderRadius: 8, padding: '7px 10px' }}>
                 <span className="text-xs font-mono font-semibold text-hally-text truncate flex-1">{row.emote_name}</span>
-                {row.emote_type && (
-                  <span className="text-xs shrink-0" style={{ color: '#8B5CF6', fontSize: 10 }}>
-                    {typeLabel[row.emote_type] ?? row.emote_type}
-                  </span>
-                )}
+                {row.emote_type && <span className="text-xs shrink-0" style={{ color: '#8B5CF6', fontSize: 10 }}>{typeLabel[row.emote_type] ?? row.emote_type}</span>}
               </div>
             ) : (
-              <input
-                className={INPUT}
-                style={{ width: 150, flex: 'none' }}
-                placeholder="Nome emote"
-                value={row.emote_name}
-                onChange={ev => updateName(idx, ev.target.value)}
-              />
+              <input className={INPUT} style={{ width: 140, flex: 'none' }} placeholder="Nome emote" value={row.emote_name} onChange={ev => updateName(idx, ev.target.value)} />
             )}
-            <input
-              className={INPUT}
-              placeholder={row.fromTwitch ? 'Descrizione opzionale…' : 'es. Emote di gioia usata quando qualcosa va bene'}
-              value={row.description}
-              onChange={ev => updateDesc(idx, ev.target.value)}
-            />
-            {!row.fromTwitch && (
-              <button onClick={() => removeRow(idx)} style={{ ...BTN_DANGER, flexShrink: 0 }}>✕</button>
-            )}
+            <input className={INPUT} placeholder={row.fromTwitch ? 'Descrizione opzionale…' : 'Significato della emote…'} value={row.description} onChange={ev => updateDesc(idx, ev.target.value)} />
+            {!row.fromTwitch && <button onClick={() => removeRow(idx)} style={{ ...BTN_DEL, flexShrink: 0 }}>✕</button>}
           </div>
         ))}
       </div>
-
-      <button style={{ ...BTN_SECONDARY, marginTop: 12 }} onClick={addRow}>+ Aggiungi emote manuale</button>
+      <button style={{ ...BTN_SEC, marginTop: 10, fontSize: 12 }} onClick={addRow}>+ Emote manuale</button>
     </div>
   );
 }
@@ -618,32 +718,20 @@ export default function CommandsPage() {
   const [activeTab, setActiveTab] = useState(0);
 
   return (
-    <div className="max-w-3xl mx-auto px-4 py-6 space-y-6">
+    <div className="max-w-4xl mx-auto px-4 py-6 space-y-5">
       <div>
         <h1 className="text-xl font-bold text-hally-text">Comandi</h1>
-        <p className="text-sm text-hally-text-muted mt-1">Gestisci tutti i comandi del bot — personalizzati, template, annunci, contatori ed emote.</p>
+        <p className="text-sm text-hally-text-muted mt-1">Gestisci comandi personalizzati, template, annunci in rotazione, contatori ed emote.</p>
       </div>
 
-      {/* Tab bar */}
-      <div className="flex gap-1 p-1 rounded-xl" style={{ backgroundColor: '#1a1a1a', border: '1px solid #262626' }}>
+      <div className="flex gap-0.5 p-1 rounded-xl" style={{ backgroundColor: '#1a1a1a', border: '1px solid #262626' }}>
         {TABS.map((tab, i) => (
-          <button
-            key={tab}
-            onClick={() => setActiveTab(i)}
-            className="flex-1 py-2 rounded-lg text-sm font-medium transition-all duration-150"
-            style={{
-              backgroundColor: activeTab === i ? '#8B5CF6' : 'transparent',
-              color:            activeTab === i ? '#fff'     : '#6b6b6b',
-              border:           'none',
-              cursor:           'pointer',
-            }}
-          >
+          <button key={tab} onClick={() => setActiveTab(i)} className="flex-1 py-2 rounded-lg text-sm font-medium transition-all duration-150" style={{ backgroundColor: activeTab === i ? '#8B5CF6' : 'transparent', color: activeTab === i ? '#fff' : '#6b6b6b', border: 'none', cursor: 'pointer' }}>
             {tab}
           </button>
         ))}
       </div>
 
-      {/* Tab content */}
       <div style={CARD}>
         {activeTab === 0 && <TabComandi />}
         {activeTab === 1 && <TabTemplate />}
