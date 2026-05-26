@@ -40,7 +40,7 @@ const PAGE_TITLES = {
 };
 
 // Pagine che richiedono un piano attivo per essere usate
-const GATED_PATHS = new Set(['/config', '/memory']);
+const GATED_PATHS = new Set(['/memory']);
 
 function PaywallGate({ locked, children }) {
   if (!locked) return children;

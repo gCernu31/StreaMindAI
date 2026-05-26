@@ -1641,9 +1641,11 @@ class BotManager {
 
       // Email a tutti gli streamer attivi con email registrata
       const { rows: streamers } = await pool.query(`
-        SELECT id, display_name, twitch_username, email FROM streamers
-        WHERE subscription_status IN ('active', 'trialing')
-          AND email IS NOT NULL AND email <> ''
+        SELECT s.id, s.display_name, s.twitch_username, s.email, bc.bot_name
+        FROM streamers s
+        LEFT JOIN bot_configs bc ON bc.streamer_id = s.id
+        WHERE s.subscription_status IN ('active', 'trialing')
+          AND s.email IS NOT NULL AND s.email <> ''
       `);
       this._notifiedStreamers = streamers;
 
@@ -1651,6 +1653,7 @@ class BotManager {
         sendBotOfflineEmail({
           to:          s.email,
           displayName: s.display_name || s.twitch_username,
+          botName:     s.bot_name || 'il tuo bot',
         }).catch(() => {});
       }
     } catch (e) {

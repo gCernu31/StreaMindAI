@@ -8,6 +8,8 @@ import {
   sendTrialActivatedEmail,
   sendSubscriptionActivatedEmail,
   sendRenewalConfirmationEmail,
+  sendCancellationEmail,
+  sendTokenPackEmail,
 } from '../services/emailService.js';
 
 // Piani con trial di 7 giorni
@@ -235,11 +237,27 @@ subscriptionRoutes.post('/cancel', requireAuth, async (req, res) => {
     const subId = rows[0]?.stripe_subscription_id;
     if (!subId) return res.status(400).json({ error: 'Nessun abbonamento attivo.' });
 
-    await stripe.subscriptions.update(subId, { cancel_at_period_end: true });
+    const stripeSub = await stripe.subscriptions.update(subId, { cancel_at_period_end: true });
     await pool.query(
       "UPDATE streamers SET subscription_status = 'cancelling' WHERE id = $1",
       [req.user.streamer_id]
     );
+
+    // Email conferma cancellazione
+    const { rows: userData } = await pool.query(
+      'SELECT email, display_name, subscription_plan FROM streamers WHERE id = $1',
+      [req.user.streamer_id]
+    );
+    if (userData[0]?.email) {
+      const labels = { starter: 'Starter', creator: 'Creator', elite: 'Elite', signature: 'Signature' };
+      sendCancellationEmail({
+        to:          userData[0].email,
+        displayName: userData[0].display_name ?? 'Streamer',
+        planName:    labels[userData[0].subscription_plan] ?? userData[0].subscription_plan,
+        activeUntil: stripeSub.current_period_end ? new Date(stripeSub.current_period_end * 1000) : null,
+      }).catch(e => console.error('[Email] cancellation:', e.message));
+    }
+
     res.json({ success: true });
   } catch (err) {
     console.error(err);
@@ -329,6 +347,20 @@ export async function stripeWebhook(req, res) {
               [streamerId, TOKEN_PACK.messages]
             );
             console.log(`[TokenPack] +${TOKEN_PACK.messages} messaggi extra per streamer_id=${streamerId}`);
+
+            // Email conferma token pack
+            const { rows: tpUser } = await pool.query(
+              'SELECT email, display_name, extra_messages, extra_messages_expiry FROM streamers WHERE id = $1',
+              [streamerId]
+            );
+            if (tpUser[0]?.email) {
+              sendTokenPackEmail({
+                to:            tpUser[0].email,
+                displayName:   tpUser[0].display_name ?? 'Streamer',
+                expiryDate:    tpUser[0].extra_messages_expiry,
+                totalMessages: tpUser[0].extra_messages,
+              }).catch(e => console.error('[Email] token-pack:', e.message));
+            }
           }
           break;
         }

@@ -77,6 +77,25 @@ function SectionTitle({ children }) {
   return <h2 className="font-semibold text-base border-b border-hally-border pb-3 mb-5">{children}</h2>;
 }
 
+function SectionLock({ message = 'Attiva un piano per sbloccare questa sezione.' }) {
+  return (
+    <a
+      href="/subscription"
+      className="flex items-center gap-3 px-4 py-4 rounded-xl border transition-colors"
+      style={{ backgroundColor: 'rgba(139,92,246,0.05)', borderColor: 'rgba(139,92,246,0.2)', textDecoration: 'none' }}
+    >
+      <span className="text-2xl shrink-0">🔒</span>
+      <div>
+        <p className="text-sm font-semibold text-hally-text">Funzionalità Premium</p>
+        <p className="text-xs mt-0.5" style={{ color: '#a0a0a0' }}>
+          {message}{' '}
+          <span style={{ color: '#8B5CF6' }}>Prova gratis 7 giorni →</span>
+        </p>
+      </div>
+    </a>
+  );
+}
+
 const IconPlus = () => (
   <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className="w-4 h-4">
     <path d="M8 2v12M2 8h12" />
@@ -308,7 +327,11 @@ export default function ConfigPage() {
       .catch(() => setConfig({ ...EMPTY }));
 
     axios.get('/api/me', { headers: { Authorization: `Bearer ${token}` } })
-      .then(r => setPlan(r.data.subscription?.plan ?? 'starter'))
+      .then(r => {
+        const sub = r.data.subscription;
+        const isActive = ['active', 'cancelling', 'trialing'].includes(sub?.status);
+        setPlan(isActive ? (sub?.plan ?? 'starter') : 'free');
+      })
       .catch(() => setPlan('starter'));
 
   }, []);
@@ -549,21 +572,28 @@ export default function ConfigPage() {
               />
             </Field>
 
-            <Field label="Personalità base" hint="Descrivi il carattere di StreaMindAI: tono, stile, humour, riferimenti alla tua community." banError={banErrors.bot_personality}>
-              <textarea
-                className="input min-h-[148px] resize-y"
-                value={config.bot_personality}
-                onChange={e => { set('bot_personality', e.target.value); checkBan('bot_personality', e.target.value); }}
-                placeholder={`Es. Sei un bot diretto e ironico, ami i giochi indie e i meme della community. Usi un tono informale, a volte sarcasmo leggero, ma sempre rispettoso. Conosci le reference interne della chat come "modacoda" e "la regola del giovedì".`}
-                style={banErrors.bot_personality ? { borderColor: '#f87171' } : undefined}
-              />
-            </Field>
+            {plan === 'free' ? (
+              <div>
+                <label className="block text-sm font-medium mb-1.5 text-hally-text">Personalità base</label>
+                <SectionLock message="La personalità AI personalizzata richiede un piano a pagamento." />
+              </div>
+            ) : (
+              <Field label="Personalità base" hint="Descrivi il carattere di StreaMindAI: tono, stile, humour, riferimenti alla tua community." banError={banErrors.bot_personality}>
+                <textarea
+                  className="input min-h-[148px] resize-y"
+                  value={config.bot_personality}
+                  onChange={e => { set('bot_personality', e.target.value); checkBan('bot_personality', e.target.value); }}
+                  placeholder={`Es. Sei un bot diretto e ironico, ami i giochi indie e i meme della community. Usi un tono informale, a volte sarcasmo leggero, ma sempre rispettoso. Conosci le reference interne della chat come "modacoda" e "la regola del giovedì".`}
+                  style={banErrors.bot_personality ? { borderColor: '#f87171' } : undefined}
+                />
+              </Field>
+            )}
 
           </div>
         </div>
 
         {/* ── LIMITI MESSAGGI PER UTENTE ── */}
-        {(() => {
+        {plan !== 'free' && (() => {
           const PLAN_MSG_MAX = { starter: 10, creator: 50, elite: 100, signature: -1 };
           const maxVal = PLAN_MSG_MAX[plan] ?? 10;
           const maxLabel = maxVal === -1 ? 'illimitati' : maxVal;
@@ -693,7 +723,12 @@ export default function ConfigPage() {
         </div>
 
         {/* ── MEMBRI ── */}
-        {(() => {
+        {plan === 'free' ? (
+          <div className="card">
+            <SectionTitle>Membri</SectionTitle>
+            <SectionLock message="Aggiungi membri della community con un piano a pagamento." />
+          </div>
+        ) : (() => {
           const MEMBERS_CAP = { starter: 10, creator: 20, elite: 30, signature: 50 };
           const membersLimit = MEMBERS_CAP[plan] ?? 20;
           const atLimit = config.members.length >= membersLimit;

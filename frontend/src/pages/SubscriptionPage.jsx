@@ -89,9 +89,9 @@ const MULTI_PERIOD = {
 
 const PERIOD_OPTS = [
   { id: 'monthly', label: 'Mensile' },
-  { id: '3m',      label: '3 mesi −10%' },
-  { id: '6m',      label: '6 mesi −15%' },
-  { id: '12m',     label: '12 mesi −20%' },
+  { id: '3m',      label: '3m −10%' },
+  { id: '6m',      label: '6m −15%' },
+  { id: '12m',     label: '12m −20%' },
 ];
 
 // ─── Icons ────────────────────────────────────────────────────────────────────
@@ -704,7 +704,7 @@ export default function SubscriptionPage() {
                 <p className="text-xs text-hally-text-muted mt-0.5">Validi 30 giorni dall'acquisto</p>
               </div>
               <div className="text-right shrink-0">
-                <span className="text-2xl font-extrabold" style={{ color: '#8B5CF6' }}>6€</span>
+                <span className="text-2xl font-extrabold" style={{ color: '#8B5CF6' }}>7€</span>
                 <p className="text-xs text-hally-text-muted">una tantum</p>
               </div>
             </div>
@@ -721,7 +721,7 @@ export default function SubscriptionPage() {
               onMouseEnter={e => { if (!tokenPackLoading) e.currentTarget.style.backgroundColor = '#7C3AED'; }}
               onMouseLeave={e => { e.currentTarget.style.backgroundColor = '#8B5CF6'; }}
             >
-              {tokenPackLoading ? 'Reindirizzamento…' : 'Acquista — 6€'}
+              {tokenPackLoading ? 'Reindirizzamento…' : 'Acquista — 7€'}
             </button>
           </div>
 

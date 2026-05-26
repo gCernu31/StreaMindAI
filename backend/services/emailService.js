@@ -88,7 +88,7 @@ function infoRow(label, value) {
 }
 
 // ── 1. Email: benvenuto dopo registrazione ────────────────────────────────────
-export async function sendWelcomeEmail({ to, displayName }) {
+export async function sendWelcomeEmail({ to, displayName, hasPlan = false }) {
   await sendEmail({
     to,
     subject: `Benvenuto su StreaMindAI, ${displayName}!`,
@@ -98,8 +98,8 @@ export async function sendWelcomeEmail({ to, displayName }) {
       </h1>
       <p style="margin:0 0 16px;font-size:15px;line-height:1.65;color:#a0a0a0">
         Ciao <strong style="color:#ffffff">${displayName}</strong>,<br>
-        il tuo account è stato creato con successo. Ora puoi attivare il tuo piano e far decollare
-        il tuo stream con un bot AI che conosce davvero la tua community.
+        il tuo account è stato creato con successo. Ora puoi configurare il tuo bot AI e farlo
+        lavorare per te in chat Twitch.
       </p>
       <table cellpadding="0" cellspacing="0" style="width:100%;border-collapse:collapse;margin:0 0 20px;border-radius:10px;overflow:hidden">
         <tbody>
@@ -109,9 +109,12 @@ export async function sendWelcomeEmail({ to, displayName }) {
         </tbody>
       </table>
       <p style="margin:0;font-size:14px;color:#6b6b6b">
-        Inizia subito — hai 7 giorni di prova gratuita. Annulla quando vuoi.
+        ${hasPlan
+          ? 'Inizia subito — hai 7 giorni di prova gratuita. Annulla quando vuoi.'
+          : 'Il tuo bot è attivo e pronto — accedi alla dashboard per configurarlo.'
+        }
       </p>
-      ${ctaButton('Scopri i piani →', `${FRONTEND}/subscription`)}
+      ${ctaButton(hasPlan ? 'Scopri i piani →' : 'Vai alla Dashboard →', hasPlan ? `${FRONTEND}/subscription` : `${FRONTEND}/dashboard`)}
     `),
   });
 }
@@ -254,8 +257,47 @@ export async function sendAnalysisReportEmail({ to, twitchUsername, analysis }) 
   });
 }
 
+// ── 5b. Email: cancellazione abbonamento ──────────────────────────────────────
+export async function sendCancellationEmail({ to, displayName, planName, activeUntil }) {
+  const dateStr = activeUntil
+    ? new Date(activeUntil).toLocaleDateString('it-IT', { day: '2-digit', month: 'long', year: 'numeric' })
+    : null;
+
+  await sendEmail({
+    to,
+    subject: 'Abbonamento StreaMindAI cancellato',
+    html: wrapHtml(`
+      <h1 style="margin:0 0 14px;font-size:20px;font-weight:700;color:#ffffff">
+        Abbonamento cancellato
+      </h1>
+      <p style="margin:0 0 16px;font-size:15px;line-height:1.65;color:#a0a0a0">
+        Ciao <strong style="color:#ffffff">${displayName}</strong>,<br>
+        abbiamo ricevuto la tua richiesta di cancellazione del piano
+        <strong style="color:#8B5CF6">${planName}</strong>. La cancellazione è confermata.
+      </p>
+      <table cellpadding="0" cellspacing="0" style="width:100%;border-collapse:collapse;margin:0 0 20px;border-radius:10px;overflow:hidden">
+        <tbody>
+          ${infoRow('Piano cancellato', planName)}
+          ${dateStr ? infoRow('Attivo fino al', dateStr) : ''}
+          ${infoRow('Addebiti futuri', 'Nessuno — cancellazione immediata')}
+        </tbody>
+      </table>
+      <p style="margin:0 0 14px;font-size:14px;line-height:1.65;color:#6b6b6b">
+        ${dateStr
+          ? `Il tuo bot rimarrà attivo fino al <strong style="color:#e0e0e0">${dateStr}</strong>, poi verrà disattivato automaticamente.`
+          : 'Il tuo bot è stato disattivato.'
+        }
+      </p>
+      <p style="margin:0;font-size:14px;line-height:1.65;color:#6b6b6b">
+        Ci dispiace vederti andare. Se vuoi tornare, puoi riattivarti in qualsiasi momento — tutta la tua configurazione è salvata.
+      </p>
+      ${ctaButton('Riattiva StreaMindAI →', `${FRONTEND}/subscription`)}
+    `),
+  });
+}
+
 // ── 6. Email: notifica bot offline ────────────────────────────────────────────
-export async function sendBotOfflineEmail({ to, displayName }) {
+export async function sendBotOfflineEmail({ to, displayName, botName = 'il tuo bot' }) {
   await sendEmail({
     to,
     subject: `⚠️ Il tuo bot è offline — stiamo risolvendo`,
@@ -265,7 +307,7 @@ export async function sendBotOfflineEmail({ to, displayName }) {
       </h1>
       <p style="margin:0 0 16px;font-size:15px;line-height:1.65;color:#a0a0a0">
         Ciao <strong style="color:#ffffff">${displayName}</strong>,<br>
-        abbiamo rilevato che il tuo bot Hally non è attualmente connesso alla tua chat Twitch.
+        abbiamo rilevato che il tuo bot <strong style="color:#ffffff">${botName}</strong> non è attualmente connesso alla tua chat Twitch.
         Il nostro team è già al lavoro per ripristinare il servizio.
       </p>
       <div style="background:#1a1a1a;border:1px solid #2a2a2a;border-left:3px solid #f59e0b;border-radius:8px;padding:16px 20px;margin:0 0 20px">
@@ -343,6 +385,39 @@ export async function sendBotOnlineEmail({ to, displayName }) {
       <p style="margin:0;font-size:14px;color:#6b6b6b">
         Ci scusiamo per l'interruzione. Per qualsiasi domanda scrivi a
         <a href="mailto:${REPLY_TO}" style="color:#8B5CF6;text-decoration:none">${REPLY_TO}</a>.
+      </p>
+      ${ctaButton('Vai alla Dashboard →', `${FRONTEND}/dashboard`)}
+    `),
+  });
+}
+
+// ── Email: acquisto token pack ────────────────────────────────────────────────
+export async function sendTokenPackEmail({ to, displayName, expiryDate, totalMessages }) {
+  const dateStr = new Date(expiryDate).toLocaleDateString('it-IT', {
+    day: '2-digit', month: 'long', year: 'numeric',
+  });
+
+  await sendEmail({
+    to,
+    subject: 'Token pack attivato — 5.000 messaggi aggiunti',
+    html: wrapHtml(`
+      <h1 style="margin:0 0 14px;font-size:20px;font-weight:700;color:#ffffff">
+        Token pack attivato ✓
+      </h1>
+      <p style="margin:0 0 16px;font-size:15px;line-height:1.65;color:#a0a0a0">
+        Ciao <strong style="color:#ffffff">${displayName}</strong>,<br>
+        il tuo acquisto è andato a buon fine. I messaggi extra sono già attivi sul tuo canale.
+      </p>
+      <table cellpadding="0" cellspacing="0" style="width:100%;border-collapse:collapse;margin:0 0 20px;border-radius:10px;overflow:hidden">
+        <tbody>
+          ${infoRow('Messaggi aggiunti', '5.000')}
+          ${infoRow('Scadenza', dateStr)}
+          ${totalMessages != null ? infoRow('Totale ora disponibili', Number(totalMessages).toLocaleString('it-IT')) : ''}
+        </tbody>
+      </table>
+      <p style="margin:0;font-size:14px;line-height:1.65;color:#6b6b6b">
+        I token extra vengono usati automaticamente quando il piano mensile è esaurito.
+        Puoi monitorare i tuoi utilizzi dalla Dashboard.
       </p>
       ${ctaButton('Vai alla Dashboard →', `${FRONTEND}/dashboard`)}
     `),

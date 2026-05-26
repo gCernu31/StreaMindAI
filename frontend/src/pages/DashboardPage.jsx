@@ -270,27 +270,39 @@ function BotStatusCard({ botName, channel }) {
 // Card: Utilizzi oggi
 // ---------------------------------------------------------------------------
 
-function UsageCard({ value, delta }) {
+function UsageCard({ value, delta, loading }) {
   const up = delta >= 0;
   return (
     <div className="card flex flex-col gap-3">
       <p className="text-hally-text-muted text-xs font-medium uppercase tracking-wider">Utilizzi oggi</p>
-      <div>
-        <p className="text-3xl sm:text-4xl font-extrabold text-hally-text">{value}</p>
-        <p className="text-xs text-hally-text-muted mt-1">comandi ricevuti</p>
-      </div>
-      <div
-        className="flex items-center gap-1.5 text-xs font-medium border-t border-hally-border pt-2.5"
-        style={{ color: up ? '#4ade80' : '#f87171' }}
-      >
-        <svg viewBox="0 0 12 12" fill="currentColor" className="w-3 h-3">
-          {up
-            ? <path d="M6 2L10 7H2L6 2Z"/>
-            : <path d="M6 10L2 5H10L6 10Z"/>
-          }
-        </svg>
-        {up ? '+' : ''}{delta} rispetto a ieri
-      </div>
+      {loading ? (
+        <>
+          <div className="space-y-2">
+            <div className="h-9 w-16 rounded-lg animate-pulse bg-hally-border" />
+            <div className="h-3 w-24 rounded animate-pulse bg-hally-border" />
+          </div>
+          <div className="h-3.5 w-28 rounded animate-pulse bg-hally-border border-t border-hally-border pt-2.5" />
+        </>
+      ) : (
+        <>
+          <div>
+            <p className="text-3xl sm:text-4xl font-extrabold text-hally-text">{value}</p>
+            <p className="text-xs text-hally-text-muted mt-1">comandi ricevuti</p>
+          </div>
+          <div
+            className="flex items-center gap-1.5 text-xs font-medium border-t border-hally-border pt-2.5"
+            style={{ color: up ? '#4ade80' : '#f87171' }}
+          >
+            <svg viewBox="0 0 12 12" fill="currentColor" className="w-3 h-3">
+              {up
+                ? <path d="M6 2L10 7H2L6 2Z"/>
+                : <path d="M6 10L2 5H10L6 10Z"/>
+              }
+            </svg>
+            {up ? '+' : ''}{delta} rispetto a ieri
+          </div>
+        </>
+      )}
     </div>
   );
 }
@@ -299,23 +311,35 @@ function UsageCard({ value, delta }) {
 // Card: Memorie
 // ---------------------------------------------------------------------------
 
-function MemoriesCard({ total, thisWeek }) {
+function MemoriesCard({ total, thisWeek, loading }) {
   return (
     <div className="card flex flex-col gap-3">
       <p className="text-hally-text-muted text-xs font-medium uppercase tracking-wider">Memorie salvate</p>
-      <div>
-        <p className="text-3xl sm:text-4xl font-extrabold text-hally-text">{total}</p>
-        <p className="text-xs text-hally-text-muted mt-1">memoria totale</p>
-      </div>
-      <div
-        className="flex items-center gap-1.5 text-xs font-medium border-t border-hally-border pt-2.5"
-        style={{ color: '#8B5CF6' }}
-      >
-        <svg viewBox="0 0 12 12" fill="currentColor" className="w-3 h-3">
-          <path d="M6 2L10 7H2L6 2Z"/>
-        </svg>
-        +{thisWeek} questa settimana
-      </div>
+      {loading ? (
+        <>
+          <div className="space-y-2">
+            <div className="h-9 w-16 rounded-lg animate-pulse bg-hally-border" />
+            <div className="h-3 w-24 rounded animate-pulse bg-hally-border" />
+          </div>
+          <div className="h-3.5 w-32 rounded animate-pulse bg-hally-border border-t border-hally-border pt-2.5" />
+        </>
+      ) : (
+        <>
+          <div>
+            <p className="text-3xl sm:text-4xl font-extrabold text-hally-text">{total}</p>
+            <p className="text-xs text-hally-text-muted mt-1">memoria totale</p>
+          </div>
+          <div
+            className="flex items-center gap-1.5 text-xs font-medium border-t border-hally-border pt-2.5"
+            style={{ color: '#8B5CF6' }}
+          >
+            <svg viewBox="0 0 12 12" fill="currentColor" className="w-3 h-3">
+              <path d="M6 2L10 7H2L6 2Z"/>
+            </svg>
+            +{thisWeek} questa settimana
+          </div>
+        </>
+      )}
     </div>
   );
 }
@@ -442,7 +466,7 @@ function UsageChart({ data, days = 7, onDaysChange }) {
             <button
               key={d}
               onClick={() => onDaysChange(d)}
-              className="text-xs font-semibold px-2.5 py-1 rounded-full transition-colors"
+              className="text-xs font-semibold px-2.5 py-3 rounded-full transition-colors"
               style={days === d
                 ? { backgroundColor: 'rgba(139,92,246,0.15)', color: '#8B5CF6', border: '1px solid rgba(139,92,246,0.35)' }
                 : { backgroundColor: 'transparent', color: '#6b6b6b', border: '1px solid #2a2a2a' }}
@@ -829,6 +853,7 @@ function ChannelAnalysisCard({ isSubscriber }) {
 
 export default function DashboardPage({ user }) {
   const [stats, setStats]       = useState(null);
+  const [statsError, setStatsError] = useState(false);
   const [botName, setBotName]   = useState(null);
   const [memories, setMemories] = useState([]);
   const [monthly, setMonthly]   = useState(null);
@@ -845,9 +870,9 @@ export default function DashboardPage({ user }) {
     const h = { Authorization: `Bearer ${token}` };
 
     fetch('/api/dashboard/stats', { headers: h })
-      .then(r => r.ok ? r.json() : null)
+      .then(r => r.ok ? r.json() : Promise.reject(new Error('api')))
       .then(data => { if (data) { setStats(data); setChartUsage(data.usage_last_7_days ?? []); } })
-      .catch(() => {});
+      .catch(() => setStatsError(true));
 
     fetch('/api/config', { headers: h })
       .then(r => r.ok ? r.json() : null)
@@ -964,6 +989,26 @@ export default function DashboardPage({ user }) {
         </div>
       )}
 
+      {/* ── Banner errore ──────────────────────────────────────────── */}
+      {statsError && (
+        <div
+          className="flex items-center gap-3 px-4 py-3 rounded-xl border text-sm"
+          style={{ backgroundColor: 'rgba(239,68,68,0.08)', borderColor: 'rgba(239,68,68,0.25)', color: '#f87171' }}
+        >
+          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" className="w-4 h-4 shrink-0">
+            <path d="M8 6v3M8 11.5v.5M3.3 13h9.4L8 3 3.3 13z"/>
+          </svg>
+          <span className="flex-1">Impossibile caricare i dati. Riprova tra poco.</span>
+          <button
+            onClick={() => window.location.reload()}
+            className="shrink-0 text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors"
+            style={{ backgroundColor: 'rgba(239,68,68,0.12)', border: '1px solid rgba(239,68,68,0.3)', color: '#f87171' }}
+          >
+            Riprova
+          </button>
+        </div>
+      )}
+
       {/* ── Stat cards ─────────────────────────────────────────────── */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         <BotStatusCard
@@ -973,10 +1018,12 @@ export default function DashboardPage({ user }) {
         <UsageCard
           value={stats?.messages_today ?? 0}
           delta={stats?.messages_today_delta ?? 0}
+          loading={stats === null && !statsError}
         />
         <MemoriesCard
           total={stats?.memories_count ?? 0}
           thisWeek={stats?.memories_this_week ?? 0}
+          loading={stats === null && !statsError}
         />
         <SubscriptionCard
           status={sub.status ?? 'inactive'}

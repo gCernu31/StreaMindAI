@@ -245,6 +245,16 @@ export default function OnboardingWizard({ initialStep = 0, onComplete }) {
 
             <div className="mt-6 flex gap-3">
               <button
+                onClick={() => { saveProgress(1); setStep(1); }}
+                disabled={saving}
+                className="px-4 py-3 rounded-xl text-sm font-medium border transition-colors duration-150 shrink-0"
+                style={{ borderColor: '#2a2a2a', color: '#6b6b6b' }}
+                onMouseEnter={e => { e.currentTarget.style.borderColor = '#444'; e.currentTarget.style.color = '#aaa'; }}
+                onMouseLeave={e => { e.currentTarget.style.borderColor = '#2a2a2a'; e.currentTarget.style.color = '#6b6b6b'; }}
+              >
+                ← Indietro
+              </button>
+              <button
                 onClick={handleAddMember}
                 disabled={!memberUsername.trim() || saving}
                 className="flex-1 font-bold text-white py-3 rounded-xl text-sm transition-all duration-150 disabled:opacity-40 disabled:cursor-not-allowed"
@@ -261,7 +271,7 @@ export default function OnboardingWizard({ initialStep = 0, onComplete }) {
                 onMouseEnter={e => { e.currentTarget.style.borderColor = '#444'; e.currentTarget.style.color = '#aaa'; }}
                 onMouseLeave={e => { e.currentTarget.style.borderColor = '#2a2a2a'; e.currentTarget.style.color = '#6b6b6b'; }}
               >
-                Salta per ora
+                Salta
               </button>
             </div>
           </div>
@@ -285,7 +295,7 @@ export default function OnboardingWizard({ initialStep = 0, onComplete }) {
             >
               !{displayBotName} [domanda]
             </div>
-            <div>
+            <div className="flex flex-col items-center gap-3">
               <button
                 onClick={handleComplete}
                 disabled={saving}
@@ -295,6 +305,16 @@ export default function OnboardingWizard({ initialStep = 0, onComplete }) {
                 onMouseLeave={e => e.currentTarget.style.backgroundColor = '#8B5CF6'}
               >
                 {saving ? 'Caricamento...' : 'Apri Dashboard →'}
+              </button>
+              <button
+                onClick={() => { saveProgress(2); setStep(2); }}
+                disabled={saving}
+                className="text-xs font-medium transition-colors"
+                style={{ color: '#6b6b6b', background: 'none', border: 'none', cursor: 'pointer' }}
+                onMouseEnter={e => e.currentTarget.style.color = '#a0a0a0'}
+                onMouseLeave={e => e.currentTarget.style.color = '#6b6b6b'}
+              >
+                ← Torna al passo precedente
               </button>
             </div>
           </div>
