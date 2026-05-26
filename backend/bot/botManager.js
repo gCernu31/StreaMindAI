@@ -1702,7 +1702,6 @@ class BotManager {
           .map(c => c.trigger.trim().toLowerCase());
         const all = [...new Set([...legacyCmds, ...dbCmds.map(r => r.trigger)])].sort();
         reply = all.length > 0 ? `Comandi: ${all.join(', ')}` : 'Nessun comando personalizzato.';
-      }
       } else if (tname === 'clip') {
         const caller = (tags?.username || tags?.['display-name'] || '').toLowerCase();
         try {
