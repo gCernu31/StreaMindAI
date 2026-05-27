@@ -53,7 +53,6 @@ const PLANS = [
     badge: 'Più popolare',
     features: [
       'Tutto di Creator',
-      'Analytics canale mensile',
       'Memoria avanzata con contesto di gioco',
       'Messaggi eventi completamente personalizzabili',
       '25M token AI/mese',

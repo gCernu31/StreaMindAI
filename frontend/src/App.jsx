@@ -13,10 +13,6 @@ const DashboardPage        = lazy(() => import('./pages/DashboardPage.jsx'));
 const ConfigPage           = lazy(() => import('./pages/ConfigPage.jsx'));
 const MemoryPage           = lazy(() => import('./pages/MemoryPage.jsx'));
 const SubscriptionPage     = lazy(() => import('./pages/SubscriptionPage.jsx'));
-const AnalisiPage          = lazy(() => import('./pages/AnalisiPage.jsx'));
-const SharedAnalisiPage    = lazy(() => import('./pages/SharedAnalisiPage.jsx'));
-const ProvaGratisPage      = lazy(() => import('./pages/ProvaGratisPage.jsx'));
-const DashboardAnalisiPage = lazy(() => import('./pages/DashboardAnalisiPage.jsx'));
 const GuidePage            = lazy(() => import('./pages/GuidePage.jsx'));
 const ChangelogPage        = lazy(() => import('./pages/ChangelogPage.jsx'));
 const FaqPage              = lazy(() => import('./pages/FaqPage.jsx'));
@@ -86,9 +82,6 @@ export default function App() {
         <Routes>
           <Route path="/" element={<LandingPage user={auth.user} loading={auth.loading} onLogout={auth.logout} />} />
           <Route path="/login"     element={<LoginPage />} />
-          <Route path="/prova-gratis" element={<ProvaGratisPage   user={auth.user} loading={auth.loading} onLogout={auth.logout} />} />
-          <Route path="/analisi/:id" element={<SharedAnalisiPage user={auth.user} loading={auth.loading} onLogout={auth.logout} />} />
-          <Route path="/analisi-pubblica" element={<AnalisiPage  user={auth.user} loading={auth.loading} onLogout={auth.logout} />} />
           <Route path="/changelog" element={<ChangelogPage user={auth.user} loading={auth.loading} onLogout={auth.logout} />} />
           <Route path="/status"    element={<StatusPage    user={auth.user} loading={auth.loading} onLogout={auth.logout} />} />
           <Route path="/faq"       element={<FaqPage       user={auth.user} loading={auth.loading} onLogout={auth.logout} />} />
@@ -100,7 +93,6 @@ export default function App() {
           <Route path="/success"   element={<SuccessPage user={auth.user} />} />
 
           {/* Rotte protette */}
-          <Route path="/analisi"     element={<ProtectedRoute user={auth.user} loading={auth.loading}><Layout user={auth.user} onLogout={auth.logout}><DashboardAnalisiPage user={auth.user} /></Layout></ProtectedRoute>} />
           <Route path="/dashboard"   element={<ProtectedRoute user={auth.user} loading={auth.loading}><Layout user={auth.user} onLogout={auth.logout}><DashboardPage user={auth.user} /></Layout></ProtectedRoute>} />
           <Route path="/config"      element={<ProtectedRoute user={auth.user} loading={auth.loading}><Layout user={auth.user} onLogout={auth.logout}><ConfigPage /></Layout></ProtectedRoute>} />
           <Route path="/commands"    element={<ProtectedRoute user={auth.user} loading={auth.loading}><Layout user={auth.user} onLogout={auth.logout}><CommandsPage /></Layout></ProtectedRoute>} />

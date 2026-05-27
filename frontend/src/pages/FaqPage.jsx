@@ -133,7 +133,6 @@ export default function FaqPage({ user, loading, onLogout }) {
           <nav className="hidden md:flex items-center gap-6 text-sm" style={{ color: '#a0a0a0' }}>
             <Link to="/#features" className="hover:text-white transition-colors">Funzionalità</Link>
             <Link to="/#pricing"  className="hover:text-white transition-colors">Prezzi</Link>
-            <Link to="/prova-gratis" className="hover:text-white transition-colors">Analisi Gratis</Link>
           </nav>
           <AccountMenu user={user} loading={loading} onLogout={onLogout} />
         </div>
@@ -197,7 +196,6 @@ export default function FaqPage({ user, loading, onLogout }) {
           </div>
           <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-sm" style={{ color: '#6b6b6b' }}>
             <Link to="/"          className="hover:text-white transition-colors">Home</Link>
-            <Link to="/prova-gratis" className="hover:text-white transition-colors">Analisi Gratis</Link>
             <Link to="/faq"       className="hover:text-white transition-colors" style={{ color: PURPLE }}>FAQ</Link>
             <Link to="/changelog" className="hover:text-white transition-colors">Changelog</Link>
             <Link to="/login"     className="hover:text-white transition-colors">Accedi</Link>

@@ -74,13 +74,6 @@ const IconCommands = () => (
   </svg>
 );
 
-const IconAnalysis = () => (
-  <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4 shrink-0">
-    <path d="M1.5 12.5L5 8l3 2.5 3.5-5L14.5 8"/>
-    <path d="M1.5 14.5h13"/>
-  </svg>
-);
-
 const IconGuide = () => (
   <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4 shrink-0">
     <path d="M2 2.5A.5.5 0 0 1 2.5 2H10a.5.5 0 0 1 .5.5v11a.5.5 0 0 1-.5.5H2.5a.5.5 0 0 1-.5-.5v-11Z"/>
@@ -211,30 +204,6 @@ export default function Sidebar({ user, onLogout, open, onClose, hasActivePlan }
               )}
             </NavLink>
           ))}
-
-          {/* Analisi — solo per abbonati */}
-          {hasActivePlan && (
-            <NavLink
-              to="/analisi"
-              onClick={onClose}
-              className={({ isActive }) =>
-                `flex items-center gap-3 px-3 py-3 md:py-2.5 rounded-lg text-sm font-medium transition-all duration-150 ${
-                  isActive
-                    ? 'bg-hally-orange-muted text-hally-orange'
-                    : 'text-hally-text-muted hover:text-hally-text hover:bg-hally-bg-hover'
-                }`
-              }
-            >
-              {({ isActive }) => (
-                <>
-                  <span style={{ color: isActive ? '#8B5CF6' : undefined }}>
-                    <IconAnalysis />
-                  </span>
-                  <span className="flex-1">Analisi</span>
-                </>
-              )}
-            </NavLink>
-          )}
 
           {/* Separator */}
           <div className="my-2 border-t border-hally-border" />

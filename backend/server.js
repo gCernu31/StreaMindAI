@@ -13,7 +13,6 @@ import { dashboardRoutes, statsHandler } from './routes/dashboard.js';
 import { configRoutes } from './routes/config.js';
 import { memoryRoutes } from './routes/memory.js';
 import { subscriptionRoutes, stripeWebhook } from './routes/subscription.js';
-import { analyticsRoutes } from './routes/analytics.js';
 import { contactRoutes } from './routes/contact.js';
 import { onboardingRoutes } from './routes/onboarding.js';
 import { spotifyRoutes }    from './routes/spotify.js';
@@ -31,7 +30,6 @@ const PORT = process.env.PORT || 3001;
 const isProd = process.env.NODE_ENV === 'production';
 
 // ── Rate limiting ─────────────────────────────────────────────────────────────
-const analyticLimiter = rateLimit({ windowMs: 60*60*1000, max: 5,  standardHeaders: true, legacyHeaders: false, message: { error: "Troppe richieste. Riprova tra un'ora." } });
 const contactLimiter  = rateLimit({ windowMs: 60*60*1000, max: 10, standardHeaders: true, legacyHeaders: false, message: { error: "Troppe richieste. Riprova tra un'ora." } });
 const authLimiter     = rateLimit({ windowMs: 15*60*1000, max: 20, standardHeaders: true, legacyHeaders: false, message: { error: 'Troppe richieste di autenticazione.' } });
 
@@ -152,12 +150,10 @@ app.get('/api/me', authenticateToken, async (req, res) => {
 });
 
 // ── Rate limiters specifici (prima del mount delle route) ────────────────────
-app.use('/api/analytics/analyze', analyticLimiter);
 app.use('/api/contact',           contactLimiter);
 app.use('/api/auth',              authLimiter);
 
 // ── Route pubbliche (no auth) ─────────────────────────────────────────────────
-app.use('/api/analytics',   analyticsRoutes);
 app.use('/api/contact',     contactRoutes);
 app.use('/api/onboarding',  onboardingRoutes);
 app.use('/api/spotify',     spotifyRoutes);

@@ -36,7 +36,6 @@ const PAGE_TITLES = {
   '/commands':     'Comandi',
   '/memory':       'Memoria',
   '/subscription': 'Abbonamento',
-  '/analisi':      'La mia analisi',
   '/guide':        'Guida',
 };
 

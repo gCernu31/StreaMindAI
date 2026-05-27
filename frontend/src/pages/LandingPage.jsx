@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Helmet } from 'react-helmet-async';
 import AccountMenu from '../components/AccountMenu.jsx';
 
@@ -254,6 +254,262 @@ function TwitchChatMockup() {
 }
 
 // ---------------------------------------------------------------------------
+// Demo Section — messaggi chat simulati
+// ---------------------------------------------------------------------------
+
+const DEMO_CHAT_MESSAGES = [
+  { type: 'user', user: 'GinoHernandez', color: '#00c8ff', text: 'quanto sei bravo su questo gioco dai' },
+  { type: 'bot',  text: 'Grazie Gino! gcernu si sta davvero superando stasera 🎮' },
+  { type: 'user', user: 'Millina', color: '#ff69b4', text: '!nexis chi sono io per te?' },
+  { type: 'bot',  text: 'Millina! La preferita della chat, lo sai benissimo 😄' },
+  { type: 'event', text: '⭐ TheRealSam ha seguito il canale!' },
+  { type: 'bot',  text: 'Benvenuto @TheRealSam! Che bello averti qui 🎃' },
+  { type: 'user', user: 'Insane_x', color: '#ffa500', text: '!nexis di che gioco si tratta?' },
+  { type: 'bot',  text: 'Stiamo giocando a Rocket League — e gcernu sta dominando al momento 🚀' },
+  { type: 'bot',  text: 'Bella partita eh? Chi tifa per il goal? ⚡' },
+  { type: 'user', user: 'GinoHernandez', color: '#00c8ff', text: '!lurk' },
+  { type: 'bot',  text: 'Gino è in modalità lurk — silenzioso ma presente! 👀' },
+];
+
+function BotNameInput() {
+  const [displayText, setDisplayText] = useState('');
+  useEffect(() => {
+    const names = ['Nexis', 'Hally'];
+    let nameIdx = 0, charIdx = 0, deleting = false, tid;
+    function tick() {
+      const name = names[nameIdx];
+      if (!deleting) {
+        charIdx++;
+        setDisplayText(name.slice(0, charIdx));
+        if (charIdx === name.length) { deleting = true; tid = setTimeout(tick, 1400); }
+        else { tid = setTimeout(tick, 130); }
+      } else {
+        charIdx--;
+        setDisplayText(name.slice(0, charIdx));
+        if (charIdx === 0) { deleting = false; nameIdx = (nameIdx + 1) % names.length; tid = setTimeout(tick, 400); }
+        else { tid = setTimeout(tick, 80); }
+      }
+    }
+    tid = setTimeout(tick, 600);
+    return () => clearTimeout(tid);
+  }, []);
+  return (
+    <div
+      className="inline-flex items-center gap-1 mt-2 px-3 py-1.5 rounded-lg text-sm font-mono"
+      style={{ backgroundColor: 'rgba(139,92,246,0.1)', border: '1px solid rgba(139,92,246,0.3)', color: '#c4b5fd' }}
+    >
+      {displayText || ' '}
+      <span style={{ borderLeft: '2px solid #8B5CF6', height: '14px', display: 'inline-block', animation: 'smaCursorBlink 1s step-end infinite' }} />
+    </div>
+  );
+}
+
+function DemoChat() {
+  const [messages, setMessages] = useState([]);
+  const [showTyping, setShowTyping] = useState(false);
+  const chatRef = useRef(null);
+  const tidRef  = useRef(null);
+
+  useEffect(() => {
+    let idx = 0;
+    function next() {
+      if (idx >= DEMO_CHAT_MESSAGES.length) {
+        tidRef.current = setTimeout(() => {
+          setMessages([]); setShowTyping(false); idx = 0;
+          tidRef.current = setTimeout(next, 800);
+        }, 3000);
+        return;
+      }
+      const msg = DEMO_CHAT_MESSAGES[idx];
+      if (msg.type === 'bot') {
+        setShowTyping(true);
+        tidRef.current = setTimeout(() => {
+          setShowTyping(false);
+          setMessages(prev => [...prev, msg]);
+          idx++;
+          tidRef.current = setTimeout(next, 900);
+        }, 650);
+      } else {
+        setMessages(prev => [...prev, msg]);
+        idx++;
+        tidRef.current = setTimeout(next, msg.type === 'event' ? 600 : 1300);
+      }
+    }
+    tidRef.current = setTimeout(next, 800);
+    return () => { if (tidRef.current) clearTimeout(tidRef.current); };
+  }, []);
+
+  useEffect(() => {
+    if (chatRef.current) {
+      chatRef.current.scrollTo({ top: chatRef.current.scrollHeight, behavior: 'smooth' });
+    }
+  }, [messages, showTyping]);
+
+  return (
+    <div
+      className="rounded-2xl overflow-hidden border mx-auto"
+      style={{ backgroundColor: '#0d0d0d', borderColor: '#1e1e1e', maxWidth: '520px' }}
+    >
+      {/* Header canale */}
+      <div className="flex items-center justify-between px-4 py-3 border-b" style={{ borderColor: '#1e1e1e', backgroundColor: '#111' }}>
+        <div className="flex items-center gap-2">
+          <svg viewBox="0 0 24 24" className="w-4 h-4 shrink-0" fill="#8B5CF6">
+            <path d="M2.149 0l-1.612 4.119v16.836h5.731v3.045h3.224l3.045-3.045h4.657l6.269-6.269v-14.686h-21.314zm19.164 13.612l-3.582 3.582h-5.731l-3.045 3.045v-3.045h-4.836v-15.045h17.194v11.463zm-3.582-7.343v6.262h-2.149v-6.262h2.149zm-5.731 0v6.262h-2.149v-6.262h2.149z"/>
+          </svg>
+          <span className="text-sm font-bold" style={{ color: '#fff' }}>gcernu</span>
+          <div
+            className="flex items-center gap-1 text-xs font-bold px-2 py-0.5 rounded-full"
+            style={{ backgroundColor: '#ff4040', color: '#fff' }}
+          >
+            <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
+            LIVE
+          </div>
+        </div>
+        <span className="text-xs" style={{ color: '#6b6b6b' }}>247 viewer</span>
+      </div>
+
+      {/* Messaggi */}
+      <div ref={chatRef} className="p-4 space-y-2.5 overflow-y-auto" style={{ height: '300px' }}>
+        {messages.map((msg, i) => (
+          <div key={i} style={{ animation: 'smaFadeIn 0.3s ease-out' }}>
+            {msg.type === 'event' ? (
+              <div
+                className="text-xs py-1.5 px-3 rounded-full text-center"
+                style={{ backgroundColor: 'rgba(139,92,246,0.1)', color: '#a78bfa', border: '1px solid rgba(139,92,246,0.2)' }}
+              >
+                {msg.text}
+              </div>
+            ) : msg.type === 'bot' ? (
+              <div className="flex items-start gap-1.5 flex-wrap">
+                <span className="text-xs font-bold shrink-0" style={{ color: '#8B5CF6' }}>NexisAI</span>
+                <span className="text-xs shrink-0" style={{ color: '#6b6b6b' }}>🤖:</span>
+                <span className="text-xs" style={{ color: '#e0e0e0' }}>{msg.text}</span>
+              </div>
+            ) : (
+              <div className="flex items-start gap-1.5 flex-wrap">
+                <span className="text-xs font-bold shrink-0" style={{ color: msg.color }}>{msg.user}</span>
+                <span className="text-xs" style={{ color: '#a0a0a0' }}>: {msg.text}</span>
+              </div>
+            )}
+          </div>
+        ))}
+        {showTyping && (
+          <div className="flex items-center gap-1.5">
+            <span className="text-xs font-bold" style={{ color: '#8B5CF6' }}>NexisAI</span>
+            <span className="text-xs" style={{ color: '#6b6b6b' }}>🤖</span>
+            <div className="flex items-center gap-1 ml-1">
+              {[0, 1, 2].map(i => (
+                <div
+                  key={i}
+                  className="w-1.5 h-1.5 rounded-full"
+                  style={{ backgroundColor: '#8B5CF6', animation: `smaBounce 1.2s ${i * 0.2}s ease-in-out infinite` }}
+                />
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function DemoSection({ user }) {
+  return (
+    <section className="py-24 px-4">
+      <style>{`
+        @keyframes smaSlideIn { from { opacity:0; transform:translateX(-24px); } to { opacity:1; transform:translateX(0); } }
+        @keyframes smaFadeIn  { from { opacity:0; transform:translateY(8px);  } to { opacity:1; transform:translateY(0); } }
+        @keyframes smaCursorBlink { 0%,100%{opacity:1;} 50%{opacity:0;} }
+        @keyframes smaBounce { 0%,80%,100%{transform:translateY(0);} 40%{transform:translateY(-5px);} }
+      `}</style>
+      <div className="max-w-screen-2xl mx-auto">
+        {/* Heading */}
+        <div className="text-center mb-16">
+          <p className="text-sm font-semibold uppercase tracking-widest mb-3" style={{ color: '#8B5CF6' }}>Demo</p>
+          <h2 className="text-4xl font-extrabold mb-4">Vedi il tuo bot in azione</h2>
+          <p className="text-lg" style={{ color: '#a0a0a0' }}>Tre passi e il tuo bot AI è live in chat</p>
+        </div>
+
+        {/* Step cards */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-16">
+          {/* Step 1 */}
+          <div style={{ animation: 'smaSlideIn 0.6s 0.1s both' }}>
+            <div className="rounded-2xl p-7 border h-full" style={{ backgroundColor: '#151515', borderColor: '#262626' }}>
+              <div
+                className="w-12 h-12 rounded-xl flex items-center justify-center mb-5"
+                style={{ backgroundColor: 'rgba(139,92,246,0.12)' }}
+              >
+                <svg viewBox="0 0 24 24" className="w-6 h-6" fill="#8B5CF6">
+                  <path d="M2.149 0l-1.612 4.119v16.836h5.731v3.045h3.224l3.045-3.045h4.657l6.269-6.269v-14.686h-21.314zm19.164 13.612l-3.582 3.582h-5.731l-3.045 3.045v-3.045h-4.836v-15.045h17.194v11.463zm-3.582-7.343v6.262h-2.149v-6.262h2.149zm-5.731 0v6.262h-2.149v-6.262h2.149z"/>
+                </svg>
+              </div>
+              <div className="text-xs font-bold uppercase tracking-widest mb-2" style={{ color: '#8B5CF6' }}>Step 1</div>
+              <h3 className="text-lg font-bold mb-2">Connetti Twitch</h3>
+              <p className="text-sm" style={{ color: '#a0a0a0' }}>Login con un click — zero configurazione tecnica</p>
+            </div>
+          </div>
+
+          {/* Step 2 */}
+          <div style={{ animation: 'smaSlideIn 0.6s 0.25s both' }}>
+            <div className="rounded-2xl p-7 border h-full" style={{ backgroundColor: '#151515', borderColor: '#262626' }}>
+              <div
+                className="w-12 h-12 rounded-xl flex items-center justify-center mb-5"
+                style={{ backgroundColor: 'rgba(139,92,246,0.12)' }}
+              >
+                <svg viewBox="0 0 24 24" fill="none" stroke="#8B5CF6" strokeWidth="1.8" className="w-6 h-6">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904 9 18.75l-.813-2.846a4.5 4.5 0 0 0-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 0 0 3.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 0 0 3.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 0 0-3.09 3.091Zm5.355-1.154.707.707m-1.414 0 .707-.707m4.243 4.243-.707-.707m1.414 0-.707.707"/>
+                </svg>
+              </div>
+              <div className="text-xs font-bold uppercase tracking-widest mb-2" style={{ color: '#8B5CF6' }}>Step 2</div>
+              <h3 className="text-lg font-bold mb-2">Personalizza il bot</h3>
+              <p className="text-sm" style={{ color: '#a0a0a0' }}>Scegli nome, personalità e lingua</p>
+              <BotNameInput />
+            </div>
+          </div>
+
+          {/* Step 3 */}
+          <div style={{ animation: 'smaSlideIn 0.6s 0.4s both' }}>
+            <div className="rounded-2xl p-7 border h-full" style={{ backgroundColor: '#151515', borderColor: '#262626' }}>
+              <div
+                className="w-12 h-12 rounded-xl flex items-center justify-center mb-5"
+                style={{ backgroundColor: 'rgba(74,222,128,0.1)' }}
+              >
+                <span
+                  className="w-5 h-5 rounded-full animate-pulse"
+                  style={{ backgroundColor: '#4ade80', boxShadow: '0 0 14px rgba(74,222,128,0.6)' }}
+                />
+              </div>
+              <div className="text-xs font-bold uppercase tracking-widest mb-2" style={{ color: '#8B5CF6' }}>Step 3</div>
+              <h3 className="text-lg font-bold mb-2">Il bot è attivo</h3>
+              <p className="text-sm" style={{ color: '#a0a0a0' }}>Inizia a rispondere in chat in tempo reale</p>
+            </div>
+          </div>
+        </div>
+
+        {/* Chat simulata */}
+        <DemoChat />
+
+        {/* CTA */}
+        <div className="text-center mt-12">
+          <h3 className="text-2xl font-extrabold mb-2">Il tuo bot può fare tutto questo — gratis</h3>
+          <p className="text-sm mb-6" style={{ color: '#a0a0a0' }}>Piano Free attivo subito. Nessuna carta di credito richiesta.</p>
+          <Link
+            to={user ? '/dashboard' : '/login'}
+            className="inline-flex items-center gap-2 font-bold text-white px-8 py-3.5 rounded-xl text-base transition-all duration-150"
+            style={{ backgroundColor: '#8B5CF6', boxShadow: '0 0 24px rgba(139,92,246,0.35)' }}
+            onMouseEnter={e => { e.currentTarget.style.backgroundColor = '#7C3AED'; e.currentTarget.style.boxShadow = '0 0 32px rgba(139,92,246,0.5)'; }}
+            onMouseLeave={e => { e.currentTarget.style.backgroundColor = '#8B5CF6'; e.currentTarget.style.boxShadow = '0 0 24px rgba(139,92,246,0.35)'; }}
+          >
+            Inizia gratis con Twitch →
+          </Link>
+          <p className="mt-3 text-xs" style={{ color: '#6b6b6b' }}>Upgrade quando vuoi. Annulla in qualsiasi momento.</p>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+// ---------------------------------------------------------------------------
 // Header
 // ---------------------------------------------------------------------------
 
@@ -287,7 +543,6 @@ function Header({ user, loading, onLogout }) {
           <a href="#how"      className="hover:text-white transition-colors">Come funziona</a>
           <a href="#pricing"  className="hover:text-white transition-colors">Prezzi</a>
           <Link to="/faq"     className="hover:text-white transition-colors">FAQ</Link>
-          <Link to="/prova-gratis" className="hover:text-white transition-colors" style={{ color: PURPLE }}>Analisi Gratis</Link>
         </nav>
 
         {/* Account */}
@@ -507,6 +762,9 @@ export default function LandingPage({ user, loading, onLogout }) {
         </div>
       </section>
 
+      {/* ── DEMO ─────────────────────────────────────────────────────────── */}
+      <DemoSection user={user} />
+
       {/* ── PRICING ──────────────────────────────────────────────────────── */}
       <section id="pricing" className="py-24 px-4" style={{ backgroundColor: '#0a0a0a' }}>
         <div className="max-w-screen-2xl mx-auto">
@@ -640,7 +898,6 @@ export default function LandingPage({ user, loading, onLogout }) {
                   <li><a href="#features" className="hover:text-white transition-colors">Funzionalità</a></li>
                   <li><a href="#pricing"  className="hover:text-white transition-colors">Prezzi</a></li>
                   <li><a href="#how"      className="hover:text-white transition-colors">Come funziona</a></li>
-                  <li><Link to="/prova-gratis" className="hover:text-white transition-colors">Analisi Gratis</Link></li>
                   <li><Link to="/changelog" className="hover:text-white transition-colors">Changelog</Link></li>
                   <li><Link to="/status"    className="hover:text-white transition-colors">Status</Link></li>
                   <li><Link to="/login"    className="hover:text-white transition-colors">Accedi</Link></li>

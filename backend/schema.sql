@@ -549,6 +549,9 @@ ALTER TABLE bot_configs
   ADD COLUMN IF NOT EXISTS use_channel_emotes BOOLEAN DEFAULT TRUE;
 ALTER TABLE bot_configs DROP COLUMN IF EXISTS discord_video_channel;
 
+-- Rimozione feature analisi gratuita
+DROP TABLE IF EXISTS analytics_leads CASCADE;
+
 -- Migrazione da messaggi a token (Task 4)
 ALTER TABLE streamers
   ADD COLUMN IF NOT EXISTS monthly_tokens_used     BIGINT    DEFAULT 0,
