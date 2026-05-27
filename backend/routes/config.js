@@ -27,7 +27,8 @@ configRoutes.get('/', requireAuth, async (req, res) => {
               bot_active,
               last_name_change, name_changes_this_month,
               user_msg_nonsub, user_msg_subvip,
-              autonomous_mode_enabled, autonomous_mode_level
+              autonomous_mode_enabled, autonomous_mode_level,
+              use_channel_emotes
        FROM bot_configs WHERE streamer_id = $1`,
       [req.user.streamer_id]
     );
@@ -53,6 +54,7 @@ configRoutes.get('/', requireAuth, async (req, res) => {
       user_msg_subvip:            cfg.user_msg_subvip            ?? null,
       autonomous_mode_enabled:    cfg.autonomous_mode_enabled    ?? false,
       autonomous_mode_level:      cfg.autonomous_mode_level      ?? 0,
+      use_channel_emotes:         cfg.use_channel_emotes         ?? true,
     });
   } catch (err) {
     console.error(err);
@@ -114,6 +116,7 @@ configRoutes.put('/', requireAuth, async (req, res) => {
     spotify_client_id, spotify_client_secret,
     user_msg_nonsub, user_msg_subvip,
     autonomous_mode_enabled, autonomous_mode_level,
+    use_channel_emotes,
   } = req.body;
 
   // ── Validazione lunghezza campi liberi ────────────────────────────────────────
@@ -196,6 +199,7 @@ configRoutes.put('/', requireAuth, async (req, res) => {
            user_msg_subvip        = COALESCE($15, user_msg_subvip),
            autonomous_mode_enabled = COALESCE($16, autonomous_mode_enabled),
            autonomous_mode_level   = COALESCE($17, autonomous_mode_level),
+           use_channel_emotes      = COALESCE($18, use_channel_emotes),
            updated_at             = NOW()
        WHERE streamer_id = $10
        RETURNING *`,
@@ -217,6 +221,7 @@ configRoutes.put('/', requireAuth, async (req, res) => {
         user_msg_subvip        != null ? Number(user_msg_subvip) : null,
         autonomous_mode_enabled != null ? autonomous_mode_enabled : null,
         autonomous_mode_level   != null ? Number(autonomous_mode_level) : null,
+        use_channel_emotes      != null ? use_channel_emotes : null,
       ]
     );
 
@@ -255,6 +260,7 @@ configRoutes.put('/', requireAuth, async (req, res) => {
       user_msg_subvip:  cfg.user_msg_subvip ?? null,
       autonomous_mode_enabled: cfg.autonomous_mode_enabled ?? false,
       autonomous_mode_level:   cfg.autonomous_mode_level   ?? 0,
+      use_channel_emotes:      cfg.use_channel_emotes      ?? true,
     });
   } catch (err) {
     console.error(err);

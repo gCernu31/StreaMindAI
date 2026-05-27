@@ -543,4 +543,8 @@ ALTER TABLE bot_configs DROP COLUMN IF EXISTS discord_livestream_channel;
 ALTER TABLE bot_configs
   ADD COLUMN IF NOT EXISTS autonomous_mode_enabled BOOLEAN DEFAULT FALSE,
   ADD COLUMN IF NOT EXISTS autonomous_mode_level   INTEGER DEFAULT 0;
+
+-- Toggle emote canale nel prompt
+ALTER TABLE bot_configs
+  ADD COLUMN IF NOT EXISTS use_channel_emotes BOOLEAN DEFAULT TRUE;
 ALTER TABLE bot_configs DROP COLUMN IF EXISTS discord_video_channel;

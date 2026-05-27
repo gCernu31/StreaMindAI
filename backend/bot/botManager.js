@@ -1023,7 +1023,8 @@ async function loadActiveStreamers() {
       bc.social_links,
       bc.stream_schedule,
       bc.autonomous_mode_enabled,
-      bc.autonomous_mode_level
+      bc.autonomous_mode_level,
+      bc.use_channel_emotes
     FROM streamers s
     JOIN bot_configs bc ON bc.streamer_id = s.id
     WHERE s.twitch_username IS NOT NULL
@@ -1506,7 +1507,7 @@ class BotManager {
       'Stai partecipando spontaneamente alla conversazione in chat come faresti in una chat Twitch.',
       'Rispondi in MASSIMO 80 caratteri, stile commento veloce e naturale da utente in chat.',
       'Niente spiegazioni lunghe, niente presentazioni. Solo un commento breve, diretto, coerente con la tua personalità.',
-      'Puoi usare emote del canale se appropriato.',
+      streamer.use_channel_emotes !== false ? 'Puoi usare emote del canale se appropriato.' : null,
       'Esempi di stile: "bella idea pushare così 😄", "LOL ci sei quasi", "questa run sta andando forte"',
     ].filter(Boolean).join('\n');
     const prompt = `Ultimi messaggi in chat:\n${contextText}\n\nRispondi con un brevissimo commento spontaneo (max 80 caratteri).`;
@@ -1944,10 +1945,12 @@ class BotManager {
     }
 
     // ── Contesto emote personalizzate del canale ─────────────────────────────
-    const emotes = _emoteCache.get(streamer.streamer_id) ?? [];
-    if (emotes.length > 0) {
-      const emoteList = emotes.map(e => `${e.emote_name}: ${e.description}`).join('\n');
-      systemPrompt += `\n\n## EMOTE DEL CANALE\nQueste sono le emote personalizzate con il loro significato:\n${emoteList}`;
+    if (streamer.use_channel_emotes !== false) {
+      const emotes = _emoteCache.get(streamer.streamer_id) ?? [];
+      if (emotes.length > 0) {
+        const emoteList = emotes.map(e => `${e.emote_name}: ${e.description}`).join('\n');
+        systemPrompt += `\n\n## EMOTE DEL CANALE\nQueste sono le emote personalizzate con il loro significato:\n${emoteList}`;
+      }
     }
 
     // ── Istruzione rilevamento soprannome ────────────────────────────────────

@@ -636,30 +636,46 @@ function TabContatori() {
 // ─── TAB: Emote ───────────────────────────────────────────────────────────────
 
 function TabEmote() {
-  const [rows,    setRows]    = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [saving,  setSaving]  = useState(false);
-  const [saved,   setSaved]   = useState(false);
+  const [rows,             setRows]             = useState([]);
+  const [loading,          setLoading]          = useState(true);
+  const [saving,           setSaving]           = useState(false);
+  const [saved,            setSaved]            = useState(false);
+  const [useEmotes,        setUseEmotes]        = useState(true);
+  const [savingToggle,     setSavingToggle]     = useState(false);
 
   useEffect(() => {
     Promise.all([
       fetch('/api/commands/emotes',        { headers: authHeaders() }).then(r => r.ok ? r.json() : []),
       fetch('/api/commands/emotes/twitch', { headers: authHeaders() }).then(r => r.ok ? r.json() : []),
-    ]).then(([saved, twitch]) => {
-      const descMap = Object.fromEntries(saved.map(e => [e.emote_name, e.description]));
+      fetch('/api/config',                 { headers: authHeaders() }).then(r => r.ok ? r.json() : {}),
+    ]).then(([savedEmotes, twitch, cfg]) => {
+      setUseEmotes(cfg.use_channel_emotes !== false);
+      const descMap = Object.fromEntries(savedEmotes.map(e => [e.emote_name, e.description]));
       if (twitch.length > 0) {
         const merged = twitch.map(te => ({ emote_name: te.name, description: descMap[te.name] ?? '', fromTwitch: true, emote_type: te.emote_type }));
         const twitchNames = new Set(twitch.map(t => t.name));
-        for (const s of saved) if (!twitchNames.has(s.emote_name)) merged.push({ emote_name: s.emote_name, description: s.description, fromTwitch: false });
+        for (const s of savedEmotes) if (!twitchNames.has(s.emote_name)) merged.push({ emote_name: s.emote_name, description: s.description, fromTwitch: false });
         setRows(merged);
-      } else if (saved.length > 0) {
-        setRows(saved.map(e => ({ ...e, fromTwitch: false })));
+      } else if (savedEmotes.length > 0) {
+        setRows(savedEmotes.map(e => ({ ...e, fromTwitch: false })));
       } else {
         setRows([{ emote_name: '', description: '', fromTwitch: false }]);
       }
       setLoading(false);
     });
   }, []);
+
+  async function toggleUseEmotes(val) {
+    setUseEmotes(val);
+    setSavingToggle(true);
+    try {
+      await fetch('/api/config', {
+        method: 'PUT',
+        headers: authHeaders(),
+        body: JSON.stringify({ use_channel_emotes: val }),
+      });
+    } finally { setSavingToggle(false); }
+  }
 
   function updateDesc(idx, val) { setRows(rs => rs.map((r, i) => i === idx ? { ...r, description: val } : r)); }
   function updateName(idx, val) { setRows(rs => rs.map((r, i) => i === idx ? { ...r, emote_name: val } : r)); }
@@ -683,6 +699,31 @@ function TabEmote() {
   const hasTwitch = rows.some(r => r.fromTwitch);
   return (
     <div>
+      {/* Toggle usa emote canale */}
+      <div
+        className="flex items-center justify-between gap-4 mb-5 px-4 py-3 rounded-xl"
+        style={{ backgroundColor: '#141414', border: '1px solid #262626' }}
+      >
+        <div>
+          <p className="text-sm font-medium text-hally-text">Usa le emote del canale nelle risposte</p>
+          <p className="text-xs mt-0.5" style={{ color: '#6b7280' }}>
+            Se attivo, il bot userà le emote Twitch del tuo canale invece delle emoji standard
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={() => toggleUseEmotes(!useEmotes)}
+          disabled={savingToggle}
+          className="relative inline-flex h-5 w-9 shrink-0 items-center rounded-full transition-colors duration-200 focus:outline-none disabled:opacity-60"
+          style={{ backgroundColor: useEmotes ? '#8B5CF6' : '#333' }}
+        >
+          <span
+            className="inline-block h-3.5 w-3.5 rounded-full bg-white shadow transition-transform duration-200"
+            style={{ transform: useEmotes ? 'translateX(18px)' : 'translateX(3px)' }}
+          />
+        </button>
+      </div>
+
       <div className="flex items-start justify-between mb-4 gap-4">
         <p className="text-sm text-hally-text-muted">
           {hasTwitch ? 'Emote caricate da Twitch. La descrizione aiuta il bot AI a capirne il significato.' : 'Descrivi le emote del canale per il bot AI.'}
