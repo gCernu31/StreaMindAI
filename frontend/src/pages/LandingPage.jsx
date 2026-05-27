@@ -586,7 +586,7 @@ function DemoSection({ user }) {
             </div>
 
             {/* CTA sinistra */}
-            <div className="mt-8">
+            <div className="mt-8 flex flex-col items-center text-center">
               <h3
                 className="text-2xl font-extrabold mb-2"
                 style={{
@@ -608,7 +608,7 @@ function DemoSection({ user }) {
               >
                 Inizia gratis con Twitch →
               </Link>
-              <div className="flex flex-wrap items-center gap-3 mt-4">
+              <div className="flex flex-wrap items-center justify-center gap-3 mt-4">
                 <span className="text-xs" style={{ color: '#6b6b6b' }}>🔒 Sicuro</span>
                 <span className="text-xs" style={{ color: '#444' }}>·</span>
                 <span className="text-xs" style={{ color: '#6b6b6b' }}>✓ Nessuna carta</span>
