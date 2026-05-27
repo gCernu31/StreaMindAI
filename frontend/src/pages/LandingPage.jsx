@@ -464,7 +464,7 @@ function DemoSection({ user }) {
       className="py-24 px-4"
       style={{ background: 'linear-gradient(180deg, #0d0d0d 0%, #08060f 45%, #0d0d0d 100%)' }}
     >
-      <style>{\`
+      <style>{`
         @keyframes smaSlideIn { from { opacity:0; transform:translateX(-24px); } to { opacity:1; transform:translateX(0); } }
         @keyframes smaFadeIn  { from { opacity:0; transform:translateY(8px);  } to { opacity:1; transform:translateY(0); } }
         @keyframes smaCursorBlink { 0%,100%{opacity:1;} 50%{opacity:0;} }
@@ -472,7 +472,7 @@ function DemoSection({ user }) {
         .sma-chat-scroll::-webkit-scrollbar { width: 4px; }
         .sma-chat-scroll::-webkit-scrollbar-track { background: transparent; }
         .sma-chat-scroll::-webkit-scrollbar-thumb { background: rgba(139,92,246,0.3); border-radius: 2px; }
-      \`}</style>
+      `}</style>
 
       <div className="max-w-screen-2xl mx-auto">
         {/* Heading */}
