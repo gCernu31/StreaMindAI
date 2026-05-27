@@ -298,6 +298,7 @@ function BotNameInput() {
       className="inline-flex items-center gap-1 mt-2 px-3 py-1.5 rounded-lg text-sm font-mono"
       style={{ backgroundColor: 'rgba(139,92,246,0.1)', border: '1px solid rgba(139,92,246,0.3)', color: '#c4b5fd' }}
     >
+      <span style={{ color: '#6b6b6b' }}>nome:</span>
       {displayText || ' '}
       <span style={{ borderLeft: '2px solid #8B5CF6', height: '14px', display: 'inline-block', animation: 'smaCursorBlink 1s step-end infinite' }} />
     </div>
@@ -307,8 +308,21 @@ function BotNameInput() {
 function DemoChat() {
   const [messages, setMessages] = useState([]);
   const [showTyping, setShowTyping] = useState(false);
+  const [viewers, setViewers] = useState(234);
   const chatRef = useRef(null);
   const tidRef  = useRef(null);
+
+  useEffect(() => {
+    let v = 234;
+    const iv = setInterval(() => {
+      if (Math.random() > 0.6) {
+        v = Math.min(251, v + Math.floor(Math.random() * 3) + 1);
+        setViewers(v);
+        if (v >= 251) clearInterval(iv);
+      }
+    }, 2800);
+    return () => clearInterval(iv);
+  }, []);
 
   useEffect(() => {
     let idx = 0;
@@ -347,29 +361,53 @@ function DemoChat() {
 
   return (
     <div
-      className="rounded-2xl overflow-hidden border mx-auto"
-      style={{ backgroundColor: '#0d0d0d', borderColor: '#1e1e1e', maxWidth: '520px' }}
+      className="rounded-2xl overflow-hidden border w-full"
+      style={{
+        backgroundColor: '#0d0d0d',
+        borderColor: '#1e1e1e',
+        boxShadow: '0 0 0 1px rgba(139,92,246,0.08), 0 0 50px rgba(139,92,246,0.18), 0 24px 64px rgba(0,0,0,0.6)',
+        minHeight: '520px',
+        display: 'flex',
+        flexDirection: 'column',
+      }}
     >
       {/* Header canale */}
       <div className="flex items-center justify-between px-4 py-3 border-b" style={{ borderColor: '#1e1e1e', backgroundColor: '#111' }}>
-        <div className="flex items-center gap-2">
-          <svg viewBox="0 0 24 24" className="w-4 h-4 shrink-0" fill="#8B5CF6">
-            <path d="M2.149 0l-1.612 4.119v16.836h5.731v3.045h3.224l3.045-3.045h4.657l6.269-6.269v-14.686h-21.314zm19.164 13.612l-3.582 3.582h-5.731l-3.045 3.045v-3.045h-4.836v-15.045h17.194v11.463zm-3.582-7.343v6.262h-2.149v-6.262h2.149zm-5.731 0v6.262h-2.149v-6.262h2.149z"/>
-          </svg>
-          <span className="text-sm font-bold" style={{ color: '#fff' }}>gcernu</span>
+        <div className="flex items-center gap-2.5">
+          <div className="w-8 h-8 rounded-full flex items-center justify-center shrink-0" style={{ backgroundColor: 'rgba(139,92,246,0.2)' }}>
+            <svg viewBox="0 0 24 24" className="w-4 h-4" fill="#8B5CF6">
+              <path d="M2.149 0l-1.612 4.119v16.836h5.731v3.045h3.224l3.045-3.045h4.657l6.269-6.269v-14.686h-21.314zm19.164 13.612l-3.582 3.582h-5.731l-3.045 3.045v-3.045h-4.836v-15.045h17.194v11.463zm-3.582-7.343v6.262h-2.149v-6.262h2.149zm-5.731 0v6.262h-2.149v-6.262h2.149z"/>
+            </svg>
+          </div>
+          <div>
+            <span className="text-sm font-bold block" style={{ color: '#fff' }}>gcernu</span>
+            <span className="text-xs" style={{ color: '#6b6b6b' }}>Rocket League</span>
+          </div>
           <div
-            className="flex items-center gap-1 text-xs font-bold px-2 py-0.5 rounded-full"
+            className="flex items-center gap-1 text-xs font-bold px-2 py-0.5 rounded-full ml-1"
             style={{ backgroundColor: '#ff4040', color: '#fff' }}
           >
             <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
             LIVE
           </div>
         </div>
-        <span className="text-xs" style={{ color: '#6b6b6b' }}>247 viewer</span>
+        <div className="flex items-center gap-1.5">
+          <svg viewBox="0 0 24 24" className="w-3.5 h-3.5" fill="none" stroke="#6b6b6b" strokeWidth="2">
+            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+            <circle cx="9" cy="7" r="4"/>
+            <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+            <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+          </svg>
+          <span className="text-xs font-semibold" style={{ color: '#a0a0a0' }}>{viewers}</span>
+        </div>
       </div>
 
       {/* Messaggi */}
-      <div ref={chatRef} className="p-4 space-y-2.5 overflow-y-auto" style={{ height: '300px' }}>
+      <div
+        ref={chatRef}
+        className="p-4 space-y-3 overflow-y-auto flex-1 sma-chat-scroll"
+        style={{ minHeight: '400px' }}
+      >
         {messages.map((msg, i) => (
           <div key={i} style={{ animation: 'smaFadeIn 0.3s ease-out' }}>
             {msg.type === 'event' ? (
@@ -381,22 +419,22 @@ function DemoChat() {
               </div>
             ) : msg.type === 'bot' ? (
               <div className="flex items-start gap-1.5 flex-wrap">
-                <span className="text-xs font-bold shrink-0" style={{ color: '#8B5CF6' }}>NexisAI</span>
-                <span className="text-xs shrink-0" style={{ color: '#6b6b6b' }}>🤖:</span>
-                <span className="text-xs" style={{ color: '#e0e0e0' }}>{msg.text}</span>
+                <span className="text-sm font-bold shrink-0" style={{ color: '#8B5CF6' }}>NexisAI</span>
+                <span className="text-sm shrink-0" style={{ color: '#6b6b6b' }}>🤖:</span>
+                <span className="text-sm" style={{ color: '#e0e0e0' }}>{msg.text}</span>
               </div>
             ) : (
               <div className="flex items-start gap-1.5 flex-wrap">
-                <span className="text-xs font-bold shrink-0" style={{ color: msg.color }}>{msg.user}</span>
-                <span className="text-xs" style={{ color: '#a0a0a0' }}>: {msg.text}</span>
+                <span className="text-sm font-bold shrink-0" style={{ color: msg.color }}>{msg.user}</span>
+                <span className="text-sm" style={{ color: '#a0a0a0' }}>: {msg.text}</span>
               </div>
             )}
           </div>
         ))}
         {showTyping && (
           <div className="flex items-center gap-1.5">
-            <span className="text-xs font-bold" style={{ color: '#8B5CF6' }}>NexisAI</span>
-            <span className="text-xs" style={{ color: '#6b6b6b' }}>🤖</span>
+            <span className="text-sm font-bold" style={{ color: '#8B5CF6' }}>NexisAI</span>
+            <span className="text-sm" style={{ color: '#6b6b6b' }}>🤖</span>
             <div className="flex items-center gap-1 ml-1">
               {[0, 1, 2].map(i => (
                 <div
@@ -409,100 +447,181 @@ function DemoChat() {
           </div>
         )}
       </div>
+
+      {/* Input bar */}
+      <div className="border-t px-4 py-3" style={{ borderColor: '#1e1e1e' }}>
+        <div className="rounded-lg px-3 py-2 text-sm" style={{ backgroundColor: '#1e1e1e', color: '#4a4a4a' }}>
+          Invia un messaggio…
+        </div>
+      </div>
     </div>
   );
 }
 
 function DemoSection({ user }) {
   return (
-    <section className="py-24 px-4">
+    <section
+      className="py-24 px-4"
+      style={{ background: 'linear-gradient(180deg, #0d0d0d 0%, #08060f 45%, #0d0d0d 100%)' }}
+    >
       <style>{`
         @keyframes smaSlideIn { from { opacity:0; transform:translateX(-24px); } to { opacity:1; transform:translateX(0); } }
         @keyframes smaFadeIn  { from { opacity:0; transform:translateY(8px);  } to { opacity:1; transform:translateY(0); } }
         @keyframes smaCursorBlink { 0%,100%{opacity:1;} 50%{opacity:0;} }
         @keyframes smaBounce { 0%,80%,100%{transform:translateY(0);} 40%{transform:translateY(-5px);} }
+        .sma-chat-scroll::-webkit-scrollbar { width: 4px; }
+        .sma-chat-scroll::-webkit-scrollbar-track { background: transparent; }
+        .sma-chat-scroll::-webkit-scrollbar-thumb { background: rgba(139,92,246,0.3); border-radius: 2px; }
       `}</style>
+
       <div className="max-w-screen-2xl mx-auto">
         {/* Heading */}
         <div className="text-center mb-16">
           <p className="text-sm font-semibold uppercase tracking-widest mb-3" style={{ color: '#8B5CF6' }}>Demo</p>
-          <h2 className="text-4xl font-extrabold mb-4">Vedi il tuo bot in azione</h2>
+          <h2 className="text-4xl font-extrabold mb-4">Vedi il bot in azione</h2>
           <p className="text-lg" style={{ color: '#a0a0a0' }}>Tre passi e il tuo bot AI è live in chat</p>
         </div>
 
-        {/* Step cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-16">
-          {/* Step 1 */}
-          <div style={{ animation: 'smaSlideIn 0.6s 0.1s both' }}>
-            <div className="rounded-2xl p-7 border h-full" style={{ backgroundColor: '#151515', borderColor: '#262626' }}>
-              <div
-                className="w-12 h-12 rounded-xl flex items-center justify-center mb-5"
-                style={{ backgroundColor: 'rgba(139,92,246,0.12)' }}
-              >
-                <svg viewBox="0 0 24 24" className="w-6 h-6" fill="#8B5CF6">
-                  <path d="M2.149 0l-1.612 4.119v16.836h5.731v3.045h3.224l3.045-3.045h4.657l6.269-6.269v-14.686h-21.314zm19.164 13.612l-3.582 3.582h-5.731l-3.045 3.045v-3.045h-4.836v-15.045h17.194v11.463zm-3.582-7.343v6.262h-2.149v-6.262h2.149zm-5.731 0v6.262h-2.149v-6.262h2.149z"/>
-                </svg>
-              </div>
-              <div className="text-xs font-bold uppercase tracking-widest mb-2" style={{ color: '#8B5CF6' }}>Step 1</div>
-              <h3 className="text-lg font-bold mb-2">Connetti Twitch</h3>
-              <p className="text-sm" style={{ color: '#a0a0a0' }}>Login con un click — zero configurazione tecnica</p>
-            </div>
-          </div>
+        {/* Layout asimmetrico 38/62 */}
+        <div className="flex flex-col lg:flex-row gap-10 lg:gap-16 items-start">
 
-          {/* Step 2 */}
-          <div style={{ animation: 'smaSlideIn 0.6s 0.25s both' }}>
-            <div className="rounded-2xl p-7 border h-full" style={{ backgroundColor: '#151515', borderColor: '#262626' }}>
-              <div
-                className="w-12 h-12 rounded-xl flex items-center justify-center mb-5"
-                style={{ backgroundColor: 'rgba(139,92,246,0.12)' }}
-              >
-                <svg viewBox="0 0 24 24" fill="none" stroke="#8B5CF6" strokeWidth="1.8" className="w-6 h-6">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904 9 18.75l-.813-2.846a4.5 4.5 0 0 0-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 0 0 3.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 0 0 3.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 0 0-3.09 3.091Zm5.355-1.154.707.707m-1.414 0 .707-.707m4.243 4.243-.707-.707m1.414 0-.707.707"/>
-                </svg>
-              </div>
-              <div className="text-xs font-bold uppercase tracking-widest mb-2" style={{ color: '#8B5CF6' }}>Step 2</div>
-              <h3 className="text-lg font-bold mb-2">Personalizza il bot</h3>
-              <p className="text-sm" style={{ color: '#a0a0a0' }}>Scegli nome, personalità e lingua</p>
-              <BotNameInput />
-            </div>
-          </div>
+          {/* Sinistra — step verticali 38% */}
+          <div className="lg:w-[38%] flex flex-col gap-0 relative">
 
-          {/* Step 3 */}
-          <div style={{ animation: 'smaSlideIn 0.6s 0.4s both' }}>
-            <div className="rounded-2xl p-7 border h-full" style={{ backgroundColor: '#151515', borderColor: '#262626' }}>
-              <div
-                className="w-12 h-12 rounded-xl flex items-center justify-center mb-5"
-                style={{ backgroundColor: 'rgba(74,222,128,0.1)' }}
-              >
-                <span
-                  className="w-5 h-5 rounded-full animate-pulse"
-                  style={{ backgroundColor: '#4ade80', boxShadow: '0 0 14px rgba(74,222,128,0.6)' }}
+            {/* Step 1 */}
+            <div className="relative flex gap-5" style={{ animation: 'smaSlideIn 0.6s 0.1s both' }}>
+              <div className="flex flex-col items-center">
+                <div
+                  className="w-12 h-12 rounded-full flex items-center justify-center shrink-0 font-black text-sm z-10 relative"
+                  style={{
+                    backgroundColor: 'rgba(139,92,246,0.15)',
+                    border: '2px solid rgba(139,92,246,0.5)',
+                    color: '#8B5CF6',
+                    boxShadow: '0 0 20px rgba(139,92,246,0.3)',
+                  }}
+                >
+                  01
+                </div>
+                <div
+                  className="w-px flex-1 mt-2"
+                  style={{
+                    minHeight: '60px',
+                    background: 'repeating-linear-gradient(to bottom, rgba(139,92,246,0.4) 0px, rgba(139,92,246,0.4) 6px, transparent 6px, transparent 14px)',
+                  }}
                 />
               </div>
-              <div className="text-xs font-bold uppercase tracking-widest mb-2" style={{ color: '#8B5CF6' }}>Step 3</div>
-              <h3 className="text-lg font-bold mb-2">Il bot è attivo</h3>
-              <p className="text-sm" style={{ color: '#a0a0a0' }}>Inizia a rispondere in chat in tempo reale</p>
+              <div className="pb-10 pt-1 flex-1">
+                <div className="rounded-2xl p-6 border" style={{ backgroundColor: '#151515', borderColor: '#262626' }}>
+                  <div className="w-10 h-10 rounded-xl flex items-center justify-center mb-4" style={{ backgroundColor: 'rgba(139,92,246,0.12)' }}>
+                    <svg viewBox="0 0 24 24" className="w-5 h-5" fill="#8B5CF6">
+                      <path d="M2.149 0l-1.612 4.119v16.836h5.731v3.045h3.224l3.045-3.045h4.657l6.269-6.269v-14.686h-21.314zm19.164 13.612l-3.582 3.582h-5.731l-3.045 3.045v-3.045h-4.836v-15.045h17.194v11.463zm-3.582-7.343v6.262h-2.149v-6.262h2.149zm-5.731 0v6.262h-2.149v-6.262h2.149z"/>
+                    </svg>
+                  </div>
+                  <h3 className="text-base font-bold mb-1">Connetti Twitch</h3>
+                  <p className="text-sm" style={{ color: '#a0a0a0' }}>Login con un click — zero configurazione tecnica</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Step 2 */}
+            <div className="relative flex gap-5" style={{ animation: 'smaSlideIn 0.6s 0.25s both' }}>
+              <div className="flex flex-col items-center">
+                <div
+                  className="w-12 h-12 rounded-full flex items-center justify-center shrink-0 font-black text-sm z-10 relative"
+                  style={{
+                    backgroundColor: 'rgba(139,92,246,0.15)',
+                    border: '2px solid rgba(139,92,246,0.5)',
+                    color: '#8B5CF6',
+                    boxShadow: '0 0 20px rgba(139,92,246,0.3)',
+                  }}
+                >
+                  02
+                </div>
+                <div
+                  className="w-px flex-1 mt-2"
+                  style={{
+                    minHeight: '60px',
+                    background: 'repeating-linear-gradient(to bottom, rgba(139,92,246,0.4) 0px, rgba(139,92,246,0.4) 6px, transparent 6px, transparent 14px)',
+                  }}
+                />
+              </div>
+              <div className="pb-10 pt-1 flex-1">
+                <div className="rounded-2xl p-6 border" style={{ backgroundColor: '#151515', borderColor: '#262626' }}>
+                  <div className="w-10 h-10 rounded-xl flex items-center justify-center mb-4" style={{ backgroundColor: 'rgba(139,92,246,0.12)' }}>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="#8B5CF6" strokeWidth="1.8" className="w-5 h-5">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904 9 18.75l-.813-2.846a4.5 4.5 0 0 0-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 0 0 3.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 0 0 3.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 0 0-3.09 3.091Zm5.355-1.154.707.707m-1.414 0 .707-.707m4.243 4.243-.707-.707m1.414 0-.707.707"/>
+                    </svg>
+                  </div>
+                  <h3 className="text-base font-bold mb-1">Personalizza il bot</h3>
+                  <p className="text-sm mb-3" style={{ color: '#a0a0a0' }}>Scegli nome, personalità e lingua</p>
+                  <BotNameInput />
+                </div>
+              </div>
+            </div>
+
+            {/* Step 3 */}
+            <div className="relative flex gap-5" style={{ animation: 'smaSlideIn 0.6s 0.4s both' }}>
+              <div className="flex flex-col items-center">
+                <div
+                  className="w-12 h-12 rounded-full flex items-center justify-center shrink-0 font-black text-sm z-10 relative"
+                  style={{
+                    backgroundColor: 'rgba(74,222,128,0.12)',
+                    border: '2px solid rgba(74,222,128,0.4)',
+                    color: '#4ade80',
+                    boxShadow: '0 0 20px rgba(74,222,128,0.2)',
+                  }}
+                >
+                  03
+                </div>
+              </div>
+              <div className="pb-4 pt-1 flex-1">
+                <div className="rounded-2xl p-6 border" style={{ backgroundColor: '#151515', borderColor: '#262626' }}>
+                  <div className="w-10 h-10 rounded-xl flex items-center justify-center mb-4" style={{ backgroundColor: 'rgba(74,222,128,0.1)' }}>
+                    <span className="w-4 h-4 rounded-full animate-pulse" style={{ backgroundColor: '#4ade80', boxShadow: '0 0 14px rgba(74,222,128,0.6)' }} />
+                  </div>
+                  <h3 className="text-base font-bold mb-1">Il bot è attivo</h3>
+                  <p className="text-sm" style={{ color: '#a0a0a0' }}>Inizia a rispondere in chat in tempo reale</p>
+                </div>
+              </div>
+            </div>
+
+            {/* CTA sinistra */}
+            <div className="mt-8">
+              <h3
+                className="text-2xl font-extrabold mb-2"
+                style={{
+                  background: 'linear-gradient(90deg, #fff 0%, #a78bfa 50%, #8B5CF6 100%)',
+                  WebkitBackgroundClip: 'text',
+                  WebkitTextFillColor: 'transparent',
+                  backgroundClip: 'text',
+                }}
+              >
+                Gratis, subito, in 30 secondi
+              </h3>
+              <p className="text-sm mb-5" style={{ color: '#a0a0a0' }}>Piano Free attivo subito. Nessuna carta di credito richiesta.</p>
+              <Link
+                to={user ? '/dashboard' : '/login'}
+                className="inline-flex items-center gap-2 font-bold text-white px-7 py-3 rounded-xl text-sm transition-all duration-150"
+                style={{ backgroundColor: '#8B5CF6', boxShadow: '0 0 24px rgba(139,92,246,0.35)' }}
+                onMouseEnter={e => { e.currentTarget.style.backgroundColor = '#7C3AED'; e.currentTarget.style.boxShadow = '0 0 32px rgba(139,92,246,0.5)'; }}
+                onMouseLeave={e => { e.currentTarget.style.backgroundColor = '#8B5CF6'; e.currentTarget.style.boxShadow = '0 0 24px rgba(139,92,246,0.35)'; }}
+              >
+                Inizia gratis con Twitch →
+              </Link>
+              <div className="flex flex-wrap items-center gap-3 mt-4">
+                <span className="text-xs" style={{ color: '#6b6b6b' }}>🔒 Sicuro</span>
+                <span className="text-xs" style={{ color: '#444' }}>·</span>
+                <span className="text-xs" style={{ color: '#6b6b6b' }}>✓ Nessuna carta</span>
+                <span className="text-xs" style={{ color: '#444' }}>·</span>
+                <span className="text-xs" style={{ color: '#6b6b6b' }}>⚡ Attivo in 30 secondi</span>
+              </div>
             </div>
           </div>
-        </div>
 
-        {/* Chat simulata */}
-        <DemoChat />
-
-        {/* CTA */}
-        <div className="text-center mt-12">
-          <h3 className="text-2xl font-extrabold mb-2">Il tuo bot può fare tutto questo — gratis</h3>
-          <p className="text-sm mb-6" style={{ color: '#a0a0a0' }}>Piano Free attivo subito. Nessuna carta di credito richiesta.</p>
-          <Link
-            to={user ? '/dashboard' : '/login'}
-            className="inline-flex items-center gap-2 font-bold text-white px-8 py-3.5 rounded-xl text-base transition-all duration-150"
-            style={{ backgroundColor: '#8B5CF6', boxShadow: '0 0 24px rgba(139,92,246,0.35)' }}
-            onMouseEnter={e => { e.currentTarget.style.backgroundColor = '#7C3AED'; e.currentTarget.style.boxShadow = '0 0 32px rgba(139,92,246,0.5)'; }}
-            onMouseLeave={e => { e.currentTarget.style.backgroundColor = '#8B5CF6'; e.currentTarget.style.boxShadow = '0 0 24px rgba(139,92,246,0.35)'; }}
-          >
-            Inizia gratis con Twitch →
-          </Link>
-          <p className="mt-3 text-xs" style={{ color: '#6b6b6b' }}>Upgrade quando vuoi. Annulla in qualsiasi momento.</p>
+          {/* Destra — chat 62% */}
+          <div className="lg:w-[62%] w-full">
+            <DemoChat />
+          </div>
         </div>
       </div>
     </section>
@@ -583,7 +702,18 @@ const STRUCTURED_DATA_ORG = {
 
 export default function LandingPage({ user, loading, onLogout }) {
   return (
-    <div className="min-h-screen font-sans" style={{ backgroundColor: '#0d0d0d', color: '#f0f0f0' }}>
+    <div
+      className="min-h-screen font-sans"
+      style={{
+        background: `
+          radial-gradient(ellipse at 15% 20%, rgba(88,28,235,0.12) 0%, transparent 45%),
+          radial-gradient(ellipse at 85% 60%, rgba(139,92,246,0.08) 0%, transparent 45%),
+          radial-gradient(ellipse at 50% 95%, rgba(67,56,202,0.09) 0%, transparent 40%),
+          #0d0d0d
+        `,
+        color: '#f0f0f0',
+      }}
+    >
 
       <Helmet>
         <title>StreaMindAI — Il Bot AI per la tua Chat Twitch | Prova Gratis</title>
@@ -605,14 +735,25 @@ export default function LandingPage({ user, loading, onLogout }) {
         <script type="application/ld+json">{JSON.stringify(STRUCTURED_DATA_ORG)}</script>
       </Helmet>
 
+      {/* Keyframe globali landing */}
+      <style>{`
+        @keyframes smaTwinkle { from{opacity:0.1;transform:scale(0.8);} to{opacity:0.9;transform:scale(1.2);} }
+        @keyframes smaFloat   { 0%,100%{transform:translateY(0);} 50%{transform:translateY(-8px);} }
+      `}</style>
+
       <Header user={user} loading={loading} onLogout={onLogout} />
 
       {/* ── HERO ─────────────────────────────────────────────────────────── */}
       <section className="relative pt-32 pb-20 px-4 overflow-hidden">
-        {/* Sfondo glow */}
+        {/* Sfondo glow potenziato */}
         <div
           className="absolute inset-0 pointer-events-none"
-          style={{ background: 'radial-gradient(ellipse 70% 50% at 50% -10%, rgba(139,92,246,0.13) 0%, transparent 70%)' }}
+          style={{ background: 'radial-gradient(ellipse 85% 65% at 50% -5%, rgba(139,92,246,0.22) 0%, transparent 70%)' }}
+        />
+        {/* Glow laterale sinistra */}
+        <div
+          className="absolute inset-0 pointer-events-none"
+          style={{ background: 'radial-gradient(ellipse 50% 40% at -5% 60%, rgba(88,28,235,0.1) 0%, transparent 60%)' }}
         />
         {/* Griglia decorativa */}
         <div
@@ -621,6 +762,25 @@ export default function LandingPage({ user, loading, onLogout }) {
             backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none'%3E%3Cg fill='%23ffffff' fill-opacity='0.03'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`,
           }}
         />
+        {/* Stelle/particelle decorative */}
+        {[
+          {x:6,y:14,s:2.5,d:0},{x:14,y:48,s:2,d:0.4},{x:89,y:17,s:2.5,d:0.8},
+          {x:76,y:54,s:2,d:1.2},{x:93,y:75,s:3,d:0.2},{x:4,y:72,s:2,d:1.6},
+          {x:27,y:88,s:2.5,d:0.6},{x:63,y:7,s:2,d:1.0},{x:82,y:36,s:3,d:0.3},
+          {x:38,y:22,s:1.5,d:1.4},{x:52,y:68,s:2,d:0.7},{x:18,y:33,s:1.5,d:1.1},
+        ].map((star, i) => (
+          <div
+            key={i}
+            className="absolute rounded-full pointer-events-none"
+            style={{
+              left:`${star.x}%`, top:`${star.y}%`,
+              width:`${star.s}px`, height:`${star.s}px`,
+              backgroundColor: '#c4b5fd',
+              boxShadow:`0 0 ${star.s*2}px rgba(139,92,246,0.7)`,
+              animation:`smaTwinkle ${2+i*0.35}s ease-in-out ${star.d}s infinite alternate`,
+            }}
+          />
+        ))}
 
         <div className="relative max-w-screen-2xl mx-auto">
           <div className="flex flex-col lg:flex-row items-center gap-16">
@@ -694,6 +854,9 @@ export default function LandingPage({ user, loading, onLogout }) {
         </div>
       </section>
 
+      {/* ── DEMO ─────────────────────────────────────────────────────────── */}
+      <DemoSection user={user} />
+
       {/* ── FUNZIONALITÀ ─────────────────────────────────────────────────── */}
       <section id="features" className="py-24 px-4">
         <div className="max-w-screen-2xl mx-auto">
@@ -712,9 +875,9 @@ export default function LandingPage({ user, loading, onLogout }) {
               <div
                 key={i}
                 className="group rounded-xl p-7 border transition-all duration-200 cursor-default"
-                style={{ backgroundColor: '#151515', borderColor: '#262626' }}
-                onMouseEnter={e => { e.currentTarget.style.borderColor = 'rgba(139,92,246,0.35)'; e.currentTarget.style.backgroundColor = '#1a1a1a'; }}
-                onMouseLeave={e => { e.currentTarget.style.borderColor = '#262626'; e.currentTarget.style.backgroundColor = '#151515'; }}
+                style={{ backgroundColor: '#151515', borderColor: 'rgba(139,92,246,0.12)', boxShadow: '0 2px 12px rgba(0,0,0,0.3)' }}
+                onMouseEnter={e => { e.currentTarget.style.borderColor = 'rgba(139,92,246,0.4)'; e.currentTarget.style.backgroundColor = '#1a1a1a'; e.currentTarget.style.boxShadow = '0 0 24px rgba(139,92,246,0.12), 0 4px 20px rgba(0,0,0,0.4)'; }}
+                onMouseLeave={e => { e.currentTarget.style.borderColor = 'rgba(139,92,246,0.12)'; e.currentTarget.style.backgroundColor = '#151515'; e.currentTarget.style.boxShadow = '0 2px 12px rgba(0,0,0,0.3)'; }}
               >
                 <div
                   className="inline-flex items-center justify-center w-12 h-12 rounded-xl mb-5"
@@ -762,9 +925,6 @@ export default function LandingPage({ user, loading, onLogout }) {
         </div>
       </section>
 
-      {/* ── DEMO ─────────────────────────────────────────────────────────── */}
-      <DemoSection user={user} />
-
       {/* ── PRICING ──────────────────────────────────────────────────────── */}
       <section id="pricing" className="py-24 px-4" style={{ backgroundColor: '#0a0a0a' }}>
         <div className="max-w-screen-2xl mx-auto">
@@ -785,8 +945,10 @@ export default function LandingPage({ user, loading, onLogout }) {
                 className="rounded-2xl p-7 border flex flex-col relative transition-all duration-200"
                 style={{
                   backgroundColor: plan.highlight ? '#1a1a1a' : '#151515',
-                  borderColor: plan.highlight ? PURPLE : '#262626',
-                  boxShadow: plan.highlight ? '0 0 40px rgba(139,92,246,0.12)' : 'none',
+                  borderColor: plan.highlight ? PURPLE : 'rgba(139,92,246,0.12)',
+                  boxShadow: plan.highlight
+                    ? '0 0 0 1px rgba(139,92,246,0.2), 0 0 40px rgba(139,92,246,0.18), 0 8px 32px rgba(0,0,0,0.4)'
+                    : '0 2px 12px rgba(0,0,0,0.3)',
                 }}
               >
                 {plan.badge && (
