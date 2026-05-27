@@ -177,6 +177,318 @@ const plans = [
 // ---------------------------------------------------------------------------
 
 // ---------------------------------------------------------------------------
+// Demo Section — chat simulata + 3 step
+// ---------------------------------------------------------------------------
+
+const DEMO_MSGS = [
+  { type: 'user',  user: 'GinoHernandez', color: '#00c8ff', text: 'quanto sei bravo su questo gioco dai' },
+  { type: 'bot',   text: 'Grazie Gino! gcernu si sta davvero superando stasera 🎮' },
+  { type: 'user',  user: 'Millina',        color: '#ff69b4', text: '!nexis chi sono io per te?' },
+  { type: 'bot',   text: 'Millina! La preferita della chat, lo sai benissimo 😄' },
+  { type: 'event', text: '⭐ TheRealSam ha seguito il canale!' },
+  { type: 'bot',   text: 'Benvenuto @TheRealSam! Che bello averti qui 🎃' },
+  { type: 'user',  user: 'Insane_x',       color: '#ffa500', text: '!nexis di che gioco si tratta?' },
+  { type: 'bot',   text: 'Stiamo giocando a Rocket League — gcernu sta dominando 🚀' },
+  { type: 'bot',   text: 'Bella partita eh? Chi tifa per il goal? ⚡' },
+  { type: 'user',  user: 'GinoHernandez',  color: '#00c8ff', text: '!lurk' },
+  { type: 'bot',   text: 'Gino è in modalità lurk — silenzioso ma presente! 👀' },
+];
+
+function DemoBotInput() {
+  const [txt, setTxt] = useState('');
+  useEffect(() => {
+    const names = ['Nexis', 'Hally'];
+    let ni = 0, ci = 0, del = false, tid;
+    function tick() {
+      const name = names[ni];
+      if (!del) {
+        ci++;
+        setTxt(name.slice(0, ci));
+        if (ci === name.length) { del = true; tid = setTimeout(tick, 1400); }
+        else tid = setTimeout(tick, 120);
+      } else {
+        ci--;
+        setTxt(name.slice(0, ci));
+        if (ci === 0) { del = false; ni = (ni + 1) % names.length; tid = setTimeout(tick, 400); }
+        else tid = setTimeout(tick, 70);
+      }
+    }
+    tid = setTimeout(tick, 700);
+    return () => clearTimeout(tid);
+  }, []);
+  return (
+    <div className="inline-flex items-center gap-1 mt-3 px-3 py-1.5 rounded-lg text-sm font-mono"
+      style={{ backgroundColor: 'rgba(139,92,246,0.1)', border: '1px solid rgba(139,92,246,0.3)', color: '#c4b5fd' }}>
+      <span style={{ color: '#555' }}>nome:</span>
+      {txt || ' '}
+      <span style={{ borderLeft: '2px solid #8B5CF6', height: '13px', display: 'inline-block', animation: 'demoCursor 1s step-end infinite' }} />
+    </div>
+  );
+}
+
+function DemoChatPanel() {
+  const [msgs, setMsgs]         = useState([]);
+  const [typing, setTyping]     = useState(false);
+  const [viewers, setViewers]   = useState(234);
+  const chatRef = useRef(null);
+  const tidRef  = useRef(null);
+
+  useEffect(() => {
+    let v = 234;
+    const iv = setInterval(() => {
+      if (Math.random() > 0.55) {
+        v = Math.min(251, v + 1);
+        setViewers(v);
+        if (v >= 251) clearInterval(iv);
+      }
+    }, 2600);
+    return () => clearInterval(iv);
+  }, []);
+
+  useEffect(() => {
+    let i = 0;
+    function next() {
+      if (i >= DEMO_MSGS.length) {
+        tidRef.current = setTimeout(() => { setMsgs([]); setTyping(false); i = 0; tidRef.current = setTimeout(next, 800); }, 3200);
+        return;
+      }
+      const m = DEMO_MSGS[i];
+      if (m.type === 'bot') {
+        setTyping(true);
+        tidRef.current = setTimeout(() => {
+          setTyping(false);
+          setMsgs(p => [...p, m]);
+          i++;
+          tidRef.current = setTimeout(next, 950);
+        }, 700);
+      } else {
+        setMsgs(p => [...p, m]);
+        i++;
+        tidRef.current = setTimeout(next, m.type === 'event' ? 650 : 1300);
+      }
+    }
+    tidRef.current = setTimeout(next, 900);
+    return () => { if (tidRef.current) clearTimeout(tidRef.current); };
+  }, []);
+
+  useEffect(() => {
+    if (chatRef.current) chatRef.current.scrollTo({ top: chatRef.current.scrollHeight, behavior: 'smooth' });
+  }, [msgs, typing]);
+
+  return (
+    <div className="rounded-2xl overflow-hidden border w-full"
+      style={{
+        backgroundColor: '#0a0a0a', borderColor: '#1e1e1e',
+        boxShadow: '0 0 0 1px rgba(139,92,246,0.1), 0 0 60px rgba(139,92,246,0.2), 0 24px 64px rgba(0,0,0,0.7)',
+        minHeight: '520px', display: 'flex', flexDirection: 'column',
+      }}>
+      {/* Header */}
+      <div className="flex items-center justify-between px-4 py-3 border-b"
+        style={{ borderColor: '#1a1a1a', background: 'linear-gradient(180deg,#111 0%,#0d0d0d 100%)' }}>
+        <div className="flex items-center gap-2.5">
+          <div className="w-8 h-8 rounded-full flex items-center justify-center shrink-0"
+            style={{ background: 'rgba(139,92,246,0.22)', boxShadow: '0 0 12px rgba(139,92,246,0.3)' }}>
+            <svg viewBox="0 0 24 24" className="w-4 h-4" fill="#8B5CF6">
+              <path d="M2.149 0l-1.612 4.119v16.836h5.731v3.045h3.224l3.045-3.045h4.657l6.269-6.269v-14.686h-21.314zm19.164 13.612l-3.582 3.582h-5.731l-3.045 3.045v-3.045h-4.836v-15.045h17.194v11.463zm-3.582-7.343v6.262h-2.149v-6.262h2.149zm-5.731 0v6.262h-2.149v-6.262h2.149z"/>
+            </svg>
+          </div>
+          <div>
+            <span className="text-sm font-bold block leading-tight" style={{ color: '#fff' }}>gcernu</span>
+            <span className="text-xs" style={{ color: '#555' }}>Rocket League</span>
+          </div>
+          <div className="flex items-center gap-1 text-xs font-bold px-2 py-0.5 rounded-full ml-1"
+            style={{ backgroundColor: '#c0392b', color: '#fff' }}>
+            <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
+            LIVE
+          </div>
+        </div>
+        <div className="flex items-center gap-1.5">
+          <svg viewBox="0 0 24 24" className="w-3.5 h-3.5" fill="none" stroke="#555" strokeWidth="2">
+            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+            <circle cx="9" cy="7" r="4"/>
+            <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+            <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+          </svg>
+          <span className="text-xs font-semibold tabular-nums" style={{ color: '#888' }}>{viewers}</span>
+        </div>
+      </div>
+
+      {/* Messaggi */}
+      <div ref={chatRef} className="p-4 space-y-3 overflow-y-auto flex-1 demo-scroll" style={{ minHeight: '400px' }}>
+        {msgs.map((m, i) => (
+          <div key={i} style={{ animation: 'demoFade 0.25s ease-out' }}>
+            {m.type === 'event' ? (
+              <div className="text-xs py-1.5 px-3 rounded-full text-center"
+                style={{ backgroundColor: 'rgba(139,92,246,0.1)', color: '#a78bfa', border: '1px solid rgba(139,92,246,0.18)' }}>
+                {m.text}
+              </div>
+            ) : m.type === 'bot' ? (
+              <div className="flex items-start gap-1.5 flex-wrap">
+                <span className="text-sm font-bold shrink-0" style={{ color: '#8B5CF6' }}>NexisAI</span>
+                <span className="text-sm shrink-0" style={{ color: '#555' }}>🤖:</span>
+                <span className="text-sm leading-snug" style={{ color: '#ddd' }}>{m.text}</span>
+              </div>
+            ) : (
+              <div className="flex items-start gap-1.5 flex-wrap">
+                <span className="text-sm font-bold shrink-0" style={{ color: m.color }}>{m.user}</span>
+                <span className="text-sm leading-snug" style={{ color: '#999' }}>: {m.text}</span>
+              </div>
+            )}
+          </div>
+        ))}
+        {typing && (
+          <div className="flex items-center gap-1.5">
+            <span className="text-sm font-bold" style={{ color: '#8B5CF6' }}>NexisAI</span>
+            <span className="text-sm" style={{ color: '#555' }}>🤖</span>
+            <div className="flex items-center gap-1 ml-1">
+              {[0,1,2].map(k => (
+                <div key={k} className="w-1.5 h-1.5 rounded-full"
+                  style={{ backgroundColor: '#8B5CF6', animation: `demoBounce 1.1s ${k*0.18}s ease-in-out infinite` }} />
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Input bar */}
+      <div className="border-t px-4 py-3" style={{ borderColor: '#1a1a1a' }}>
+        <div className="rounded-lg px-3 py-2 text-sm" style={{ backgroundColor: '#161616', color: '#3a3a3a' }}>
+          Invia un messaggio…
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function DemoSection({ user }) {
+  return (
+    <section className="py-24 px-4" style={{
+      background: 'linear-gradient(180deg, #0d0d0d 0%, #060410 50%, #0d0d0d 100%)',
+    }}>
+      <style>{`
+        @keyframes demoSlide  { from{opacity:0;transform:translateX(-20px);}to{opacity:1;transform:translateX(0);} }
+        @keyframes demoFade   { from{opacity:0;transform:translateY(6px); }to{opacity:1;transform:translateY(0);} }
+        @keyframes demoCursor { 0%,100%{opacity:1;} 50%{opacity:0;} }
+        @keyframes demoBounce { 0%,80%,100%{transform:translateY(0);} 40%{transform:translateY(-5px);} }
+        .demo-scroll::-webkit-scrollbar       { width:4px; }
+        .demo-scroll::-webkit-scrollbar-track  { background:transparent; }
+        .demo-scroll::-webkit-scrollbar-thumb  { background:rgba(139,92,246,0.35);border-radius:2px; }
+      `}</style>
+
+      <div className="max-w-screen-2xl mx-auto">
+        {/* Heading */}
+        <div className="text-center mb-16">
+          <p className="text-sm font-semibold uppercase tracking-widest mb-3" style={{ color: '#8B5CF6' }}>Demo</p>
+          <h2 className="text-4xl font-extrabold mb-4">Vedi il bot in azione</h2>
+          <p className="text-lg max-w-xl mx-auto" style={{ color: '#a0a0a0' }}>Tre passi e il tuo bot AI è live in chat</p>
+        </div>
+
+        {/* Layout asimmetrico 38 / 62 */}
+        <div className="flex flex-col lg:flex-row gap-10 lg:gap-14 items-start">
+
+          {/* ── Sinistra: step verticali ─────────────────────────────── */}
+          <div className="lg:w-[38%] flex flex-col">
+
+            {/* Step 1 */}
+            <div className="flex gap-4" style={{ animation: 'demoSlide 0.55s 0.1s both' }}>
+              <div className="flex flex-col items-center shrink-0">
+                <div className="w-11 h-11 rounded-full flex items-center justify-center font-black text-sm"
+                  style={{ backgroundColor: 'rgba(139,92,246,0.15)', border: '2px solid rgba(139,92,246,0.5)',
+                    color: '#8B5CF6', boxShadow: '0 0 18px rgba(139,92,246,0.28)' }}>01</div>
+                <div className="w-px mt-2 mb-0 flex-1"
+                  style={{ minHeight:'56px', background:'repeating-linear-gradient(to bottom,rgba(139,92,246,0.45) 0px,rgba(139,92,246,0.45) 5px,transparent 5px,transparent 12px)' }} />
+              </div>
+              <div className="pb-8 flex-1">
+                <div className="rounded-2xl p-5 border" style={{ backgroundColor:'#131313', borderColor:'#232323' }}>
+                  <div className="w-9 h-9 rounded-xl flex items-center justify-center mb-3" style={{ backgroundColor:'rgba(139,92,246,0.12)' }}>
+                    <svg viewBox="0 0 24 24" className="w-5 h-5" fill="#8B5CF6">
+                      <path d="M2.149 0l-1.612 4.119v16.836h5.731v3.045h3.224l3.045-3.045h4.657l6.269-6.269v-14.686h-21.314zm19.164 13.612l-3.582 3.582h-5.731l-3.045 3.045v-3.045h-4.836v-15.045h17.194v11.463zm-3.582-7.343v6.262h-2.149v-6.262h2.149zm-5.731 0v6.262h-2.149v-6.262h2.149z"/>
+                    </svg>
+                  </div>
+                  <h3 className="text-base font-bold mb-1">Connetti Twitch</h3>
+                  <p className="text-sm" style={{ color:'#888' }}>Login con un click — zero configurazione tecnica</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Step 2 */}
+            <div className="flex gap-4" style={{ animation: 'demoSlide 0.55s 0.22s both' }}>
+              <div className="flex flex-col items-center shrink-0">
+                <div className="w-11 h-11 rounded-full flex items-center justify-center font-black text-sm"
+                  style={{ backgroundColor: 'rgba(139,92,246,0.15)', border: '2px solid rgba(139,92,246,0.5)',
+                    color: '#8B5CF6', boxShadow: '0 0 18px rgba(139,92,246,0.28)' }}>02</div>
+                <div className="w-px mt-2 flex-1"
+                  style={{ minHeight:'56px', background:'repeating-linear-gradient(to bottom,rgba(139,92,246,0.45) 0px,rgba(139,92,246,0.45) 5px,transparent 5px,transparent 12px)' }} />
+              </div>
+              <div className="pb-8 flex-1">
+                <div className="rounded-2xl p-5 border" style={{ backgroundColor:'#131313', borderColor:'#232323' }}>
+                  <div className="w-9 h-9 rounded-xl flex items-center justify-center mb-3" style={{ backgroundColor:'rgba(139,92,246,0.12)' }}>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="#8B5CF6" strokeWidth="1.8" className="w-5 h-5">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904 9 18.75l-.813-2.846a4.5 4.5 0 0 0-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 0 0 3.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 0 0 3.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 0 0-3.09 3.091Z"/>
+                    </svg>
+                  </div>
+                  <h3 className="text-base font-bold mb-1">Personalizza il bot</h3>
+                  <p className="text-sm mb-1" style={{ color:'#888' }}>Scegli nome, personalità e lingua</p>
+                  <DemoBotInput />
+                </div>
+              </div>
+            </div>
+
+            {/* Step 3 */}
+            <div className="flex gap-4" style={{ animation: 'demoSlide 0.55s 0.34s both' }}>
+              <div className="flex flex-col items-center shrink-0">
+                <div className="w-11 h-11 rounded-full flex items-center justify-center font-black text-sm"
+                  style={{ backgroundColor: 'rgba(74,222,128,0.12)', border: '2px solid rgba(74,222,128,0.4)',
+                    color: '#4ade80', boxShadow: '0 0 18px rgba(74,222,128,0.2)' }}>03</div>
+              </div>
+              <div className="pb-4 flex-1">
+                <div className="rounded-2xl p-5 border" style={{ backgroundColor:'#131313', borderColor:'#232323' }}>
+                  <div className="w-9 h-9 rounded-xl flex items-center justify-center mb-3" style={{ backgroundColor:'rgba(74,222,128,0.1)' }}>
+                    <span className="w-3.5 h-3.5 rounded-full animate-pulse"
+                      style={{ backgroundColor:'#4ade80', boxShadow:'0 0 12px rgba(74,222,128,0.6)' }} />
+                  </div>
+                  <h3 className="text-base font-bold mb-1">Il bot è attivo</h3>
+                  <p className="text-sm" style={{ color:'#888' }}>Inizia a rispondere in chat in tempo reale</p>
+                </div>
+              </div>
+            </div>
+
+            {/* CTA */}
+            <div className="mt-6 flex flex-col items-center text-center">
+              <h3 className="text-xl font-extrabold mb-2"
+                style={{ background:'linear-gradient(90deg,#fff 0%,#a78bfa 55%,#8B5CF6 100%)',
+                  WebkitBackgroundClip:'text', WebkitTextFillColor:'transparent', backgroundClip:'text' }}>
+                Il tuo bot può fare tutto questo — gratis
+              </h3>
+              <p className="text-sm mb-4" style={{ color:'#888' }}>Piano Free attivo subito. Nessuna carta di credito richiesta.</p>
+              <Link to={user ? '/dashboard' : '/login'}
+                className="inline-flex items-center gap-2 font-bold text-white px-7 py-3 rounded-xl text-sm transition-all duration-150"
+                style={{ backgroundColor:'#8B5CF6', boxShadow:'0 0 22px rgba(139,92,246,0.38)' }}
+                onMouseEnter={e => { e.currentTarget.style.backgroundColor='#7C3AED'; e.currentTarget.style.boxShadow='0 0 32px rgba(139,92,246,0.55)'; }}
+                onMouseLeave={e => { e.currentTarget.style.backgroundColor='#8B5CF6'; e.currentTarget.style.boxShadow='0 0 22px rgba(139,92,246,0.38)'; }}>
+                Inizia gratis con Twitch →
+              </Link>
+              <div className="flex flex-wrap items-center justify-center gap-2 mt-3">
+                <span className="text-xs" style={{ color:'#555' }}>🔒 Sicuro</span>
+                <span className="text-xs" style={{ color:'#333' }}>·</span>
+                <span className="text-xs" style={{ color:'#555' }}>✓ Nessuna carta</span>
+                <span className="text-xs" style={{ color:'#333' }}>·</span>
+                <span className="text-xs" style={{ color:'#555' }}>⚡ Attivo in 30 secondi</span>
+              </div>
+            </div>
+          </div>
+
+          {/* ── Destra: chat grande ──────────────────────────────────── */}
+          <div className="lg:w-[62%] w-full">
+            <DemoChatPanel />
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+// ---------------------------------------------------------------------------
 // Header
 // ---------------------------------------------------------------------------
 
@@ -357,11 +669,10 @@ export default function LandingPage({ user, loading, onLogout }) {
               </div>
 
               <h1 className="text-5xl lg:text-6xl font-extrabold leading-tight tracking-tight mb-6">
-                Il bot AI per Twitch<br />
-                <span style={{ color: PURPLE }}>che impara da te</span>
+                Il bot AI per Twitch <span style={{ color: PURPLE }}>che impara da te</span>
               </h1>
 
-              <p className="text-lg lg:text-xl mb-10 max-w-xl mx-auto" style={{ color: '#a0a0a0' }}>
+              <p className="text-lg lg:text-xl mb-10 max-w-3xl mx-auto" style={{ color: '#a0a0a0' }}>
                 StreaMindAI è il chatbot AI personalizzato per la tua chat Twitch: risponde agli spettatori, ringrazia i follower, gestisce le song request e cresce con la tua community — tutto in automatico, tutto configurabile.
               </p>
 
@@ -396,6 +707,9 @@ export default function LandingPage({ user, loading, onLogout }) {
           </div>
         </div>
       </section>
+
+      {/* ── DEMO ──────────────────────────────────────────────────────── */}
+      <DemoSection user={user} />
 
       {/* ── FUNZIONALITÀ ─────────────────────────────────────────────────── */}
       <section id="features" className="py-24 px-4">
