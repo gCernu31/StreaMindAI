@@ -236,7 +236,7 @@ export default function Layout({ user, onLogout, children }) {
 
         {/* Contenuto pagina */}
         <main className="flex-1 overflow-auto">
-          <div className="max-w-5xl mx-auto px-3 sm:px-6 py-4 sm:py-7">
+          <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 py-4 sm:py-7">
             <PaywallGate locked={GATED_PATHS.has(pathname) && hasActivePlan === false}>
               {children}
             </PaywallGate>

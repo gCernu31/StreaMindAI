@@ -116,7 +116,6 @@ const plans = [
       'Bot AI base con personalità configurabile',
       'Max 10 membri configurabili',
       'Risposte automatiche: follow e sub',
-      'Max 200 messaggi/sera sul canale',
       '1,5M token AI/mese',
       'Trial 7 giorni con carta',
     ],
@@ -133,7 +132,6 @@ const plans = [
       'Song request Spotify (!sr)',
       'Memoria base (apprendimento automatico)',
       'Tutti gli eventi automatici',
-      'Max 600 messaggi/sera sul canale',
       '8M token AI/mese',
       'Trial 7 giorni con carta',
     ],
@@ -151,7 +149,6 @@ const plans = [
       'Analytics canale mensile',
       'Memoria avanzata con contesto di gioco',
       'Messaggi eventi completamente personalizzabili',
-      'Max 1.200 messaggi/sera sul canale',
       '25M token AI/mese',
       'Trial 7 giorni con carta',
     ],
@@ -168,7 +165,6 @@ const plans = [
       'Onboarding 1:1 con gCernu',
       'Supporto diretto',
       'Setup completamente personalizzato',
-      'Max 3.000 messaggi/sera sul canale',
       '60M token AI/mese',
       'Nessun trial — contatto diretto prima dell\'attivazione',
     ],
@@ -276,7 +272,7 @@ function Header({ user, loading, onLogout }) {
         scrolled ? 'bg-[#0d0d0d]/95 backdrop-blur-md border-b border-[#262626]' : 'bg-transparent'
       }`}
     >
-      <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
+      <div className="max-w-screen-2xl mx-auto px-4 h-16 flex items-center justify-between">
         {/* Logo */}
         <a href="/" className="flex items-center gap-2.5 group">
           <BrainWaveLogo className="w-7 h-7 group-hover:opacity-80 transition-opacity" />
@@ -357,7 +353,7 @@ export default function LandingPage({ user, loading, onLogout }) {
       <Header user={user} loading={loading} onLogout={onLogout} />
 
       {/* ── HERO ─────────────────────────────────────────────────────────── */}
-      <section className="relative pt-32 pb-20 px-6 overflow-hidden">
+      <section className="relative pt-32 pb-20 px-4 overflow-hidden">
         {/* Sfondo glow */}
         <div
           className="absolute inset-0 pointer-events-none"
@@ -371,7 +367,7 @@ export default function LandingPage({ user, loading, onLogout }) {
           }}
         />
 
-        <div className="relative max-w-6xl mx-auto">
+        <div className="relative max-w-screen-2xl mx-auto">
           <div className="flex flex-col lg:flex-row items-center gap-16">
             {/* Testo */}
             <div className="flex-1 text-center lg:text-left">
@@ -444,8 +440,8 @@ export default function LandingPage({ user, loading, onLogout }) {
       </section>
 
       {/* ── FUNZIONALITÀ ─────────────────────────────────────────────────── */}
-      <section id="features" className="py-24 px-6">
-        <div className="max-w-5xl mx-auto">
+      <section id="features" className="py-24 px-4">
+        <div className="max-w-screen-2xl mx-auto">
           <div className="text-center mb-16">
             <p className="text-sm font-semibold uppercase tracking-widest mb-3" style={{ color: PURPLE }}>
               Funzionalità
@@ -481,8 +477,8 @@ export default function LandingPage({ user, loading, onLogout }) {
       </section>
 
       {/* ── COME FUNZIONA ────────────────────────────────────────────────── */}
-      <section id="how" className="py-24 px-6" style={{ backgroundColor: '#0a0a0a' }}>
-        <div className="max-w-5xl mx-auto">
+      <section id="how" className="py-24 px-4" style={{ backgroundColor: '#0a0a0a' }}>
+        <div className="max-w-screen-2xl mx-auto">
           <div className="text-center mb-16">
             <p className="text-sm font-semibold uppercase tracking-widest mb-3" style={{ color: PURPLE }}>
               Come funziona
@@ -512,8 +508,8 @@ export default function LandingPage({ user, loading, onLogout }) {
       </section>
 
       {/* ── PRICING ──────────────────────────────────────────────────────── */}
-      <section id="pricing" className="py-24 px-6" style={{ backgroundColor: '#0a0a0a' }}>
-        <div className="max-w-5xl mx-auto">
+      <section id="pricing" className="py-24 px-4" style={{ backgroundColor: '#0a0a0a' }}>
+        <div className="max-w-screen-2xl mx-auto">
           <div className="text-center mb-16">
             <p className="text-sm font-semibold uppercase tracking-widest mb-3" style={{ color: PURPLE }}>
               Prezzi
@@ -595,7 +591,7 @@ export default function LandingPage({ user, loading, onLogout }) {
       </section>
 
       {/* ── CTA FINALE ───────────────────────────────────────────────────── */}
-      <section className="py-24 px-6">
+      <section className="py-24 px-4">
         <div className="max-w-3xl mx-auto text-center">
           <div className="flex justify-center mb-6">
             <BrainWaveLogo className="w-14 h-14" />
@@ -622,8 +618,8 @@ export default function LandingPage({ user, loading, onLogout }) {
       </section>
 
       {/* ── FOOTER ───────────────────────────────────────────────────────── */}
-      <footer className="border-t px-6 py-12" style={{ borderColor: '#1e1e1e', backgroundColor: '#0a0a0a' }}>
-        <div className="max-w-5xl mx-auto">
+      <footer className="border-t px-4 py-12" style={{ borderColor: '#1e1e1e', backgroundColor: '#0a0a0a' }}>
+        <div className="max-w-screen-2xl mx-auto">
           <div className="flex flex-col md:flex-row items-start justify-between gap-10 mb-10">
             {/* Brand */}
             <div>
