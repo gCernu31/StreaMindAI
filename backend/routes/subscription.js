@@ -3,6 +3,7 @@ import Stripe from 'stripe';
 import pool from '../db.js';
 import { requireAuth } from '../middleware/auth.js';
 import { botManager } from '../bot/botManager.js';
+import { getLimits } from '../config/planLimits.js';
 import {
   sendTrialReminderEmail,
   sendTrialActivatedEmail,
@@ -34,9 +35,9 @@ const PERIOD_PRICE_IDS = {
 };
 
 const TOKEN_PACK = {
-  priceId:  process.env.STRIPE_PRICE_TOKEN_PACK, // prodotto one-time 7€ su Stripe
-  messages: 5_000,
-  days:     30,
+  priceId: process.env.STRIPE_PRICE_TOKEN_PACK, // prodotto one-time 3€ su Stripe
+  tokens:  1_000_000,
+  days:    30,
 };
 
 function stripeRequired(res) {
@@ -55,23 +56,23 @@ subscriptionRoutes.get('/', requireAuth, async (req, res) => {
     const { rows } = await pool.query(
       `SELECT subscription_status, subscription_plan, subscription_end,
               stripe_customer_id, stripe_subscription_id,
-              extra_messages, extra_messages_expiry
+              extra_tokens, extra_tokens_expires_at
        FROM streamers WHERE id = $1`,
       [req.user.streamer_id]
     );
     const s = rows[0] ?? {};
-    const today = new Date().toISOString().slice(0, 10);
-    const extraActive = (s.extra_messages ?? 0) > 0 &&
-                        s.extra_messages_expiry != null &&
-                        s.extra_messages_expiry >= today;
+    const now = new Date();
+    const extraActive = (s.extra_tokens ?? 0) > 0 &&
+                        s.extra_tokens_expires_at != null &&
+                        new Date(s.extra_tokens_expires_at) > now;
     res.json({
       status:             s.subscription_status  ?? 'inactive',
       plan:               s.subscription_plan    ?? null,
       subscription_end:   s.subscription_end     ?? null,
       stripe_customer_id: s.stripe_customer_id   ?? null,
       extra_tokens: {
-        count:  extraActive ? (s.extra_messages ?? 0) : 0,
-        expiry: extraActive ? s.extra_messages_expiry : null,
+        count:  extraActive ? (s.extra_tokens ?? 0) : 0,
+        expiry: extraActive ? s.extra_tokens_expires_at : null,
       },
     });
   } catch (err) {
@@ -338,27 +339,27 @@ export async function stripeWebhook(req, res) {
           if (streamerId) {
             await pool.query(
               `UPDATE streamers
-               SET extra_messages = CASE
-                     WHEN extra_messages_expiry >= CURRENT_DATE THEN extra_messages + $2
+               SET extra_tokens = CASE
+                     WHEN extra_tokens_expires_at > NOW() THEN extra_tokens + $2
                      ELSE $2
                    END,
-                   extra_messages_expiry = CURRENT_DATE + INTERVAL '${TOKEN_PACK.days} days'
+                   extra_tokens_expires_at = NOW() + INTERVAL '${TOKEN_PACK.days} days'
                WHERE id = $1`,
-              [streamerId, TOKEN_PACK.messages]
+              [streamerId, TOKEN_PACK.tokens]
             );
-            console.log(`[TokenPack] +${TOKEN_PACK.messages} messaggi extra per streamer_id=${streamerId}`);
+            console.log(`[TokenPack] +${TOKEN_PACK.tokens} token extra per streamer_id=${streamerId}`);
 
             // Email conferma token pack
             const { rows: tpUser } = await pool.query(
-              'SELECT email, display_name, extra_messages, extra_messages_expiry FROM streamers WHERE id = $1',
+              'SELECT email, display_name, extra_tokens, extra_tokens_expires_at FROM streamers WHERE id = $1',
               [streamerId]
             );
             if (tpUser[0]?.email) {
               sendTokenPackEmail({
                 to:            tpUser[0].email,
                 displayName:   tpUser[0].display_name ?? 'Streamer',
-                expiryDate:    tpUser[0].extra_messages_expiry,
-                totalMessages: tpUser[0].extra_messages,
+                expiryDate:    tpUser[0].extra_tokens_expires_at,
+                totalMessages: tpUser[0].extra_tokens,
               }).catch(e => console.error('[Email] token-pack:', e.message));
             }
           }
@@ -371,6 +372,7 @@ export async function stripeWebhook(req, res) {
         const sub = await stripe.subscriptions.retrieve(session.subscription);
         // Durante il trial lo status è 'trialing', altrimenti 'active'
         const checkoutStatus = sub.status === 'trialing' ? 'trialing' : 'active';
+        const planTokenLimit = getLimits(plan).monthlyTokens ?? 0;
         await pool.query(
           `UPDATE streamers
            SET subscription_status    = $1,
@@ -378,9 +380,12 @@ export async function stripeWebhook(req, res) {
                stripe_subscription_id = $3,
                stripe_customer_id     = $4,
                subscription_end       = to_timestamp($5),
-               trial_used             = (trial_used OR $6)
+               trial_used             = (trial_used OR $6),
+               monthly_tokens_limit   = $8,
+               monthly_tokens_used    = 0,
+               tokens_reset_at        = DATE_TRUNC('month', NOW())
            WHERE id = $7`,
-          [checkoutStatus, plan, sub.id, sub.customer, sub.current_period_end, checkoutStatus === 'trialing', streamerId]
+          [checkoutStatus, plan, sub.id, sub.customer, sub.current_period_end, checkoutStatus === 'trialing', streamerId, planTokenLimit]
         );
         // Connette immediatamente il bot al canale senza attendere il sync periodico
         const { rows: newUser } = await pool.query(
@@ -441,13 +446,15 @@ export async function stripeWebhook(req, res) {
           : sub.status === 'active'               ? 'active'
           : sub.status === 'past_due'             ? 'past_due'
           : sub.status;
+        const updatedTokenLimit = plan ? getLimits(plan).monthlyTokens : null;
         await pool.query(
           `UPDATE streamers
-           SET subscription_status = $1,
-               subscription_plan   = COALESCE($2, subscription_plan),
-               subscription_end    = to_timestamp($3)
+           SET subscription_status   = $1,
+               subscription_plan     = COALESCE($2, subscription_plan),
+               subscription_end      = to_timestamp($3),
+               monthly_tokens_limit  = COALESCE($5, monthly_tokens_limit)
            WHERE stripe_subscription_id = $4`,
-          [status, plan, sub.current_period_end, sub.id]
+          [status, plan, sub.current_period_end, sub.id, updatedTokenLimit]
         );
         // Trial → attivo: invia email di conferma
         if (prevAttr.status === 'trialing' && sub.status === 'active') {

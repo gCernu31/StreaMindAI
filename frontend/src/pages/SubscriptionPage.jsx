@@ -20,37 +20,37 @@ const PLANS = [
   {
     id: 'starter',
     name: 'Starter',
-    price: 12,
+    price: 7.99,
     features: [
       'Bot AI base con personalità configurabile',
-      'Max 5 membri configurabili',
+      'Max 10 membri configurabili',
       'Messaggi automatici per tutti gli eventi (follow, sub, gift, cheer, raid)',
       'Limiti messaggi per utente configurabili',
       'Max 200 messaggi/sera sul canale',
-      '4.000 messaggi/mese',
+      '1,5M token AI/mese',
       'Trial 7 giorni con carta',
     ],
   },
   {
     id: 'creator',
     name: 'Creator',
-    price: 24,
+    price: 22,
     features: [
       'Bot AI completamente personalizzato',
-      'Membri illimitati',
+      'Fino a 20 membri configurabili',
       'Song request Spotify (!sr)',
       'Memoria base (apprendimento automatico)',
       'Tutti gli eventi automatici (follow, sub, gift, bit, hype train, raid)',
       'Comandi custom configurabili',
       'Max 600 messaggi/sera sul canale',
-      '12.000 messaggi/mese',
+      '8M token AI/mese',
       'Trial 7 giorni con carta',
     ],
   },
   {
     id: 'elite',
     name: 'Elite',
-    price: 44,
+    price: 70,
     highlight: true,
     badge: 'Più popolare',
     features: [
@@ -59,21 +59,21 @@ const PLANS = [
       'Memoria avanzata con contesto di gioco',
       'Messaggi eventi completamente personalizzabili',
       'Max 1.200 messaggi/sera sul canale',
-      '24.000 messaggi/mese',
+      '25M token AI/mese',
       'Trial 7 giorni con carta',
     ],
   },
   {
     id: 'signature',
     name: 'Signature',
-    price: 99,
+    price: 165,
     features: [
       'Tutto di Elite',
       'Onboarding 1:1 con gCernu',
       'Supporto diretto',
       'Setup completamente personalizzato',
       'Max 3.000 messaggi/sera sul canale',
-      '60.000 messaggi/mese',
+      '60M token AI/mese',
       'Nessun trial — contatto diretto prima dell\'attivazione',
     ],
   },
@@ -81,10 +81,10 @@ const PLANS = [
 
 // ─── Prezzi plurimensili ──────────────────────────────────────────────────────
 const MULTI_PERIOD = {
-  starter:   { '3m': { total: 32.40,  monthly: 10.80, discount: 10 }, '6m': { total: 61.20,  monthly: 10.20, discount: 15 }, '12m': { total: 115.20, monthly: 9.60,  discount: 20 } },
-  creator:   { '3m': { total: 64.80,  monthly: 21.60, discount: 10 }, '6m': { total: 122.40, monthly: 20.40, discount: 15 }, '12m': { total: 230.40, monthly: 19.20, discount: 20 } },
-  elite:     { '3m': { total: 118.80, monthly: 39.60, discount: 10 }, '6m': { total: 224.40, monthly: 37.40, discount: 15 }, '12m': { total: 422.40, monthly: 35.20, discount: 20 } },
-  signature: { '3m': { total: 267.30, monthly: 89.10, discount: 10 }, '6m': { total: 504.90, monthly: 84.15, discount: 15 }, '12m': { total: 950.40, monthly: 79.20, discount: 20 } },
+  starter:   { '3m': { total: 21.57,  monthly: 7.19,  discount: 10 }, '6m': { total: 40.75,  monthly: 6.79,  discount: 15 }, '12m': { total: 76.70,  monthly: 6.39,  discount: 20 } },
+  creator:   { '3m': { total: 59.40,  monthly: 19.80, discount: 10 }, '6m': { total: 112.20, monthly: 18.70, discount: 15 }, '12m': { total: 211.20, monthly: 17.60, discount: 20 } },
+  elite:     { '3m': { total: 189.00, monthly: 63.00, discount: 10 }, '6m': { total: 357.00, monthly: 59.50, discount: 15 }, '12m': { total: 672.00, monthly: 56.00, discount: 20 } },
+  signature: { '3m': { total: 445.50, monthly: 148.50,discount: 10 }, '6m': { total: 841.50, monthly: 140.25,discount: 15 }, '12m': { total: 1584.00,monthly: 132.00,discount: 20 } },
 };
 
 const PERIOD_OPTS = [
@@ -215,8 +215,8 @@ function SignatureContactModal({ onClose }) {
                 value={form.piano}
                 onChange={e => set('piano', e.target.value)}
               >
-                <option value="Signature">Signature — 99€/mese</option>
-                <option value="Elite">Elite — 44€/mese</option>
+                <option value="Signature">Signature — 165€/mese</option>
+                <option value="Elite">Elite — 70€/mese</option>
               </select>
             </div>
             <div>
@@ -432,7 +432,7 @@ export default function SubscriptionPage() {
                 <StatusBadge status={sub.status} />
                 <span className="font-bold text-lg capitalize">{sub.plan}</span>
                 {currentPlan && (
-                  <span className="text-hally-text-muted text-sm">— {currentPlan.price}€/mese</span>
+                  <span className="text-hally-text-muted text-sm">— {Number(currentPlan.price).toFixed(2).replace('.', ',')}€/mese</span>
                 )}
               </div>
               {sub.subscription_end && (
@@ -661,7 +661,7 @@ export default function SubscriptionPage() {
           <span className="text-green-400 text-xl shrink-0">✓</span>
           <div>
             <p className="text-sm font-semibold text-hally-text">Token Pack acquistato!</p>
-            <p className="text-xs text-hally-text-muted mt-0.5">5.000 messaggi extra sono stati aggiunti al tuo account. Validi 30 giorni.</p>
+            <p className="text-xs text-hally-text-muted mt-0.5">1.000.000 token extra sono stati aggiunti al tuo account. Validi 30 giorni.</p>
           </div>
         </div>
       )}
@@ -700,11 +700,11 @@ export default function SubscriptionPage() {
           >
             <div className="flex items-start justify-between gap-3">
               <div>
-                <p className="font-bold text-hally-text">5.000 messaggi extra</p>
+                <p className="font-bold text-hally-text">1.000.000 token extra</p>
                 <p className="text-xs text-hally-text-muted mt-0.5">Validi 30 giorni dall'acquisto</p>
               </div>
               <div className="text-right shrink-0">
-                <span className="text-2xl font-extrabold" style={{ color: '#8B5CF6' }}>7€</span>
+                <span className="text-2xl font-extrabold" style={{ color: '#8B5CF6' }}>3€</span>
                 <p className="text-xs text-hally-text-muted">una tantum</p>
               </div>
             </div>
@@ -721,7 +721,7 @@ export default function SubscriptionPage() {
               onMouseEnter={e => { if (!tokenPackLoading) e.currentTarget.style.backgroundColor = '#7C3AED'; }}
               onMouseLeave={e => { e.currentTarget.style.backgroundColor = '#8B5CF6'; }}
             >
-              {tokenPackLoading ? 'Reindirizzamento…' : 'Acquista — 7€'}
+              {tokenPackLoading ? 'Reindirizzamento…' : 'Acquista — 3€'}
             </button>
           </div>
 

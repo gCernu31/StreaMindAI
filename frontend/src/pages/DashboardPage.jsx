@@ -28,14 +28,14 @@ function AnalysisBody({ text }) {
 }
 
 // ---------------------------------------------------------------------------
-// Limiti messaggi mensili per piano
+// Limiti token mensili per piano (in milioni per leggibilità)
 // ---------------------------------------------------------------------------
 
-const MONTHLY_LIMITS = {
-  starter:   4_000,
-  creator:   12_000,
-  elite:     24_000,
-  signature: 60_000,
+const MONTHLY_TOKEN_LIMITS = {
+  starter:   1_500_000,
+  creator:   8_000_000,
+  elite:     25_000_000,
+  signature: 60_000_000,
 };
 
 // ---------------------------------------------------------------------------
@@ -348,16 +348,23 @@ function MemoriesCard({ total, thisWeek, loading }) {
 // Card: Abbonamento + Messaggi mensili
 // ---------------------------------------------------------------------------
 
+function formatTokens(n) {
+  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1).replace('.', ',')}M`;
+  if (n >= 1_000)     return `${(n / 1_000).toFixed(0)}k`;
+  return String(n);
+}
+
 function SubscriptionCard({ status, plan, daysRemaining, totalDays, expiresAt, monthly }) {
   const pctRemaining = totalDays > 0 ? (daysRemaining / totalDays) * 100 : 0;
   const isLow = daysRemaining < 7;
   const barColor = isLow ? '#f87171' : '#8B5CF6';
   const active = status === 'active' || status === 'cancelling' || status === 'trialing';
 
-  const monthlyLimit = MONTHLY_LIMITS[monthly?.plan ?? plan?.toLowerCase() ?? 'starter'] ?? 2_000;
-  const monthlyCount = monthly?.count ?? 0;
-  const monthlyPct   = Math.min((monthlyCount / monthlyLimit) * 100, 100);
-  const monthlyColor = monthlyPct > 85 ? '#f87171' : monthlyPct > 60 ? '#fbbf24' : '#8B5CF6';
+  const planKey       = monthly?.plan ?? plan?.toLowerCase() ?? 'starter';
+  const tokenLimit    = monthly?.limit > 0 ? monthly.limit : (MONTHLY_TOKEN_LIMITS[planKey] ?? 0);
+  const tokenUsed     = monthly?.count ?? 0;
+  const tokenPct      = tokenLimit > 0 ? Math.min((tokenUsed / tokenLimit) * 100, 100) : 0;
+  const tokenColor    = tokenPct > 85 ? '#f87171' : tokenPct > 60 ? '#fbbf24' : '#8B5CF6';
 
   return (
     <div className="card flex flex-col gap-3">
@@ -391,20 +398,22 @@ function SubscriptionCard({ status, plan, daysRemaining, totalDays, expiresAt, m
             </div>
             <p className="text-xs text-hally-text-muted">{pctRemaining.toFixed(0)}% rimanente</p>
           </div>
-          <div className="border-t border-hally-border pt-2.5 space-y-1.5">
-            <div className="flex flex-col gap-0.5 text-xs">
-              <span className="text-hally-text-muted">Messaggi/mese</span>
-              <span className="font-medium text-hally-text">
-                {monthlyCount.toLocaleString('it-IT')} / {monthlyLimit.toLocaleString('it-IT')}
-              </span>
+          {tokenLimit > 0 && (
+            <div className="border-t border-hally-border pt-2.5 space-y-1.5">
+              <div className="flex flex-col gap-0.5 text-xs">
+                <span className="text-hally-text-muted">Token AI/mese</span>
+                <span className="font-medium text-hally-text">
+                  {formatTokens(tokenUsed)} / {formatTokens(tokenLimit)}
+                </span>
+              </div>
+              <div className="h-1.5 rounded-full bg-hally-border overflow-hidden">
+                <div
+                  className="h-full rounded-full transition-all duration-700"
+                  style={{ width: `${tokenPct}%`, backgroundColor: tokenColor }}
+                />
+              </div>
             </div>
-            <div className="h-1.5 rounded-full bg-hally-border overflow-hidden">
-              <div
-                className="h-full rounded-full transition-all duration-700"
-                style={{ width: `${monthlyPct}%`, backgroundColor: monthlyColor }}
-              />
-            </div>
-          </div>
+          )}
         </>
       ) : (
         <div>
@@ -890,6 +899,7 @@ export default function DashboardPage({ user }) {
         if (data) {
           setMonthly({
             count: data.monthly_messages?.count ?? 0,
+            limit: data.monthly_messages?.limit ?? 0,
             plan:  data.subscription?.plan ?? null,
           });
           setSubStatus(data.subscription?.status ?? 'inactive');

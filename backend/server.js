@@ -112,12 +112,17 @@ app.get('/api/me', authenticateToken, async (req, res) => {
       `SELECT id, twitch_username, display_name, email, avatar_url,
               subscription_status, subscription_plan, subscription_end,
               chat_messages_count, event_messages_count, monthly_reset_date,
-              extra_messages, extra_messages_expiry
+              monthly_tokens_used, monthly_tokens_limit, tokens_reset_at,
+              extra_tokens, extra_tokens_expires_at
        FROM streamers WHERE id = $1`,
       [req.user.streamer_id]
     );
     if (!rows[0]) return res.status(404).json({ error: 'Utente non trovato' });
     const u = rows[0];
+    const now = new Date();
+    const extraTokensActive = (u.extra_tokens ?? 0) > 0 &&
+      u.extra_tokens_expires_at != null &&
+      new Date(u.extra_tokens_expires_at) > now;
     res.json({
       id:              u.id,
       twitch_username: u.twitch_username,
@@ -130,13 +135,14 @@ app.get('/api/me', authenticateToken, async (req, res) => {
         end:    u.subscription_end    ?? null,
       },
       monthly_messages: {
-        count:       u.chat_messages_count  ?? 0,
-        event_count: u.event_messages_count ?? 0,
-        reset_date:  u.monthly_reset_date   ?? null,
+        count:       u.monthly_tokens_used   ?? 0,
+        limit:       u.monthly_tokens_limit  ?? 0,
+        event_count: u.event_messages_count  ?? 0,
+        reset_date:  u.tokens_reset_at       ?? u.monthly_reset_date ?? null,
       },
       extra_tokens: {
-        count:  u.extra_messages        ?? 0,
-        expiry: u.extra_messages_expiry ?? null,
+        count:  extraTokensActive ? (u.extra_tokens ?? 0) : 0,
+        expiry: extraTokensActive ? u.extra_tokens_expires_at : null,
       },
     });
   } catch (err) {

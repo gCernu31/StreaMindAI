@@ -548,3 +548,11 @@ ALTER TABLE bot_configs
 ALTER TABLE bot_configs
   ADD COLUMN IF NOT EXISTS use_channel_emotes BOOLEAN DEFAULT TRUE;
 ALTER TABLE bot_configs DROP COLUMN IF EXISTS discord_video_channel;
+
+-- Migrazione da messaggi a token (Task 4)
+ALTER TABLE streamers
+  ADD COLUMN IF NOT EXISTS monthly_tokens_used     BIGINT    DEFAULT 0,
+  ADD COLUMN IF NOT EXISTS monthly_tokens_limit    BIGINT    DEFAULT 0,
+  ADD COLUMN IF NOT EXISTS extra_tokens            BIGINT    DEFAULT 0,
+  ADD COLUMN IF NOT EXISTS extra_tokens_expires_at TIMESTAMP,
+  ADD COLUMN IF NOT EXISTS tokens_reset_at         TIMESTAMP DEFAULT DATE_TRUNC('month', NOW());

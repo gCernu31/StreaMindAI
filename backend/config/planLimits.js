@@ -5,6 +5,7 @@
  * Convenzione: -1 = illimitato, false = non disponibile, null = funzione non inclusa nel piano
  *
  * channelMessagesPerSession = limite hard totale messaggi sul canale per sessione live
+ * monthlyTokens             = token Gemini mensili inclusi nel piano (0 = AI non disponibile)
  * userLimits                = range configurabile dallo streamer dal pannello
  *                             (null = funzione non disponibile nel piano)
  */
@@ -13,7 +14,8 @@ export const PLAN_LIMITS = {
 
   free: {
     channelMessagesPerSession: 0,   // nessuna risposta AI
-    monthlyMessages:           0,
+    monthlyTokens:             0,
+    monthlyMessages:           0,   // compat legacy
 
     members:             0,
     songRequest:         false,
@@ -29,23 +31,20 @@ export const PLAN_LIMITS = {
   },
 
   starter: {
-    // Limiti hard
     channelMessagesPerSession: 200,
-    monthlyMessages:           4_000,
+    monthlyTokens:             1_500_000,
+    monthlyMessages:           1_500_000, // compat legacy
 
-    // Funzionalità
     members:             10,
     songRequest:         false,
     memory:              false,
     analytics:           false,
     customEventMessages: false,
-    trial:               7, // giorni
+    trial:               7,
     autonomousMaxLevel:  2,
 
-    // Risposte automatiche eventi Twitch
     events: ['follow', 'subscribe', 'gift_sub', 'cheer', 'hype_train', 'raid'],
 
-    // Range configurabile dallo streamer (default usato se non personalizzato)
     userLimits: {
       nonSub:     { default: 3,  max: 10 },
       subVip:     { default: 10, max: 10 },
@@ -56,11 +55,12 @@ export const PLAN_LIMITS = {
 
   creator: {
     channelMessagesPerSession: 600,
-    monthlyMessages:           12_000,
+    monthlyTokens:             8_000_000,
+    monthlyMessages:           8_000_000, // compat legacy
 
     members:             20,
     songRequest:         true,
-    memory:              true,    // memoria base
+    memory:              true,
     analytics:           false,
     customEventMessages: false,
     trial:               7,
@@ -70,7 +70,7 @@ export const PLAN_LIMITS = {
 
     userLimits: {
       nonSub:     { default: 3,  max: 50 },
-      subVip:     { default: -1, max: 50 },   // -1 = illimitati di default
+      subVip:     { default: -1, max: 50 },
       songNonSub: { default: 1,  max: 50 },
       songSubVip: { default: 3,  max: 50 },
     },
@@ -78,11 +78,12 @@ export const PLAN_LIMITS = {
 
   elite: {
     channelMessagesPerSession: 1_200,
-    monthlyMessages:           24_000,
+    monthlyTokens:             25_000_000,
+    monthlyMessages:           25_000_000, // compat legacy
 
     members:             30,
     songRequest:         true,
-    memory:              true,    // avanzata con game_context
+    memory:              true,
     analytics:           true,
     customEventMessages: true,
     trial:               7,
@@ -100,14 +101,15 @@ export const PLAN_LIMITS = {
 
   signature: {
     channelMessagesPerSession: 3_000,
-    monthlyMessages:           60_000,
+    monthlyTokens:             60_000_000,
+    monthlyMessages:           60_000_000, // compat legacy
 
     members:             50,
     songRequest:         true,
     memory:              true,
     analytics:           true,
     customEventMessages: true,
-    trial:               false, // nessun trial — contatto diretto
+    trial:               false,
     autonomousMaxLevel:  5,
 
     events: ['follow', 'subscribe', 'gift_sub', 'cheer', 'hype_train', 'raid'],
@@ -139,8 +141,8 @@ export const PLAN_LABELS = {
 /** Prezzi mensili in euro */
 export const PLAN_PRICES = {
   free:      0,
-  starter:   12,
-  creator:   24,
-  elite:     44,
-  signature: 99,
+  starter:   7.99,
+  creator:   22,
+  elite:     70,
+  signature: 165,
 };

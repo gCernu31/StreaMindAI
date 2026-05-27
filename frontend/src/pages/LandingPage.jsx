@@ -110,14 +110,14 @@ const plans = [
   {
     id: 'starter',
     name: 'Starter',
-    price: '12',
+    price: '7,99',
     desc: 'Per chi inizia',
     features: [
       'Bot AI base con personalità configurabile',
       'Max 10 membri configurabili',
       'Risposte automatiche: follow e sub',
       'Max 200 messaggi/sera sul canale',
-      '4.000 messaggi/mese',
+      '1,5M token AI/mese',
       'Trial 7 giorni con carta',
     ],
     cta: 'Inizia con Starter',
@@ -126,7 +126,7 @@ const plans = [
   {
     id: 'creator',
     name: 'Creator',
-    price: '24',
+    price: '22',
     desc: 'Per streamer in crescita',
     features: [
       'Bot AI completamente personalizzato',
@@ -134,7 +134,7 @@ const plans = [
       'Memoria base (apprendimento automatico)',
       'Tutti gli eventi automatici',
       'Max 600 messaggi/sera sul canale',
-      '12.000 messaggi/mese',
+      '8M token AI/mese',
       'Trial 7 giorni con carta',
     ],
     cta: 'Scegli Creator',
@@ -143,7 +143,7 @@ const plans = [
   {
     id: 'elite',
     name: 'Elite',
-    price: '44',
+    price: '70',
     desc: 'Il più scelto',
     badge: 'Più popolare',
     features: [
@@ -152,7 +152,7 @@ const plans = [
       'Memoria avanzata con contesto di gioco',
       'Messaggi eventi completamente personalizzabili',
       'Max 1.200 messaggi/sera sul canale',
-      '24.000 messaggi/mese',
+      '25M token AI/mese',
       'Trial 7 giorni con carta',
     ],
     cta: 'Vai con Elite',
@@ -161,7 +161,7 @@ const plans = [
   {
     id: 'signature',
     name: 'Signature',
-    price: '99',
+    price: '165',
     desc: 'Il massimo, senza limiti',
     features: [
       'Tutto di Elite',
@@ -169,7 +169,7 @@ const plans = [
       'Supporto diretto',
       'Setup completamente personalizzato',
       'Max 3.000 messaggi/sera sul canale',
-      '60.000 messaggi/mese',
+      '60M token AI/mese',
       'Nessun trial — contatto diretto prima dell\'attivazione',
     ],
     cta: 'Signature Experience',
@@ -314,11 +314,11 @@ const STRUCTURED_DATA_APP = {
   operatingSystem: 'Web',
   url: 'https://streamindai.com',
   offers: [
-    { '@type': 'Offer', name: 'Free',      price: '0.00',  priceCurrency: 'EUR', description: 'Bot AI di base, eventi automatici, nessuna carta richiesta' },
-    { '@type': 'Offer', name: 'Starter',   price: '12.00', priceCurrency: 'EUR', description: 'Bot AI base, 4.000 messaggi/mese, trial 7 giorni' },
-    { '@type': 'Offer', name: 'Creator',   price: '24.00', priceCurrency: 'EUR', description: 'Song request Spotify, 12.000 messaggi/mese, trial 7 giorni' },
-    { '@type': 'Offer', name: 'Elite',     price: '44.00', priceCurrency: 'EUR', description: 'Analytics, memoria avanzata, 24.000 messaggi/mese, trial 7 giorni' },
-    { '@type': 'Offer', name: 'Signature', price: '99.00', priceCurrency: 'EUR', description: 'Onboarding 1:1, setup personalizzato, 60.000 messaggi/mese' },
+    { '@type': 'Offer', name: 'Free',      price: '0.00',   priceCurrency: 'EUR', description: 'Bot AI di base, eventi automatici, nessuna carta richiesta' },
+    { '@type': 'Offer', name: 'Starter',   price: '7.99',   priceCurrency: 'EUR', description: 'Bot AI base, 1,5M token AI/mese, trial 7 giorni' },
+    { '@type': 'Offer', name: 'Creator',   price: '22.00',  priceCurrency: 'EUR', description: 'Song request Spotify, 8M token AI/mese, trial 7 giorni' },
+    { '@type': 'Offer', name: 'Elite',     price: '70.00',  priceCurrency: 'EUR', description: 'Analytics, memoria avanzata, 25M token AI/mese, trial 7 giorni' },
+    { '@type': 'Offer', name: 'Signature', price: '165.00', priceCurrency: 'EUR', description: 'Onboarding 1:1, setup personalizzato, 60M token AI/mese' },
   ],
 };
 
