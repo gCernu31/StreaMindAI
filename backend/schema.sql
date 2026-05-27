@@ -538,4 +538,9 @@ $$;
 ALTER TABLE bot_configs DROP COLUMN IF EXISTS discord_bot_token;
 ALTER TABLE bot_configs DROP COLUMN IF EXISTS discord_announce_channel;
 ALTER TABLE bot_configs DROP COLUMN IF EXISTS discord_livestream_channel;
+
+-- Modalità autonoma bot
+ALTER TABLE bot_configs
+  ADD COLUMN IF NOT EXISTS autonomous_mode_enabled BOOLEAN DEFAULT FALSE,
+  ADD COLUMN IF NOT EXISTS autonomous_mode_level   INTEGER DEFAULT 0;
 ALTER TABLE bot_configs DROP COLUMN IF EXISTS discord_video_channel;

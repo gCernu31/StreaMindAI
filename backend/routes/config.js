@@ -26,7 +26,8 @@ configRoutes.get('/', requireAuth, async (req, res) => {
               spotify_access_token,
               bot_active,
               last_name_change, name_changes_this_month,
-              user_msg_nonsub, user_msg_subvip
+              user_msg_nonsub, user_msg_subvip,
+              autonomous_mode_enabled, autonomous_mode_level
        FROM bot_configs WHERE streamer_id = $1`,
       [req.user.streamer_id]
     );
@@ -50,6 +51,8 @@ configRoutes.get('/', requireAuth, async (req, res) => {
       name_changes_this_month:    cfg.name_changes_this_month    ?? 0,
       user_msg_nonsub:            cfg.user_msg_nonsub            ?? null,
       user_msg_subvip:            cfg.user_msg_subvip            ?? null,
+      autonomous_mode_enabled:    cfg.autonomous_mode_enabled    ?? false,
+      autonomous_mode_level:      cfg.autonomous_mode_level      ?? 0,
     });
   } catch (err) {
     console.error(err);
@@ -110,6 +113,7 @@ configRoutes.put('/', requireAuth, async (req, res) => {
     event_messages,
     spotify_client_id, spotify_client_secret,
     user_msg_nonsub, user_msg_subvip,
+    autonomous_mode_enabled, autonomous_mode_level,
   } = req.body;
 
   // ── Validazione lunghezza campi liberi ────────────────────────────────────────
@@ -190,6 +194,8 @@ configRoutes.put('/', requireAuth, async (req, res) => {
            spotify_client_secret  = COALESCE($13, spotify_client_secret),
            user_msg_nonsub        = COALESCE($14, user_msg_nonsub),
            user_msg_subvip        = COALESCE($15, user_msg_subvip),
+           autonomous_mode_enabled = COALESCE($16, autonomous_mode_enabled),
+           autonomous_mode_level   = COALESCE($17, autonomous_mode_level),
            updated_at             = NOW()
        WHERE streamer_id = $10
        RETURNING *`,
@@ -209,6 +215,8 @@ configRoutes.put('/', requireAuth, async (req, res) => {
         spotify_client_secret ? encrypt(spotify_client_secret) : null,
         user_msg_nonsub        != null ? Number(user_msg_nonsub) : null,
         user_msg_subvip        != null ? Number(user_msg_subvip) : null,
+        autonomous_mode_enabled != null ? autonomous_mode_enabled : null,
+        autonomous_mode_level   != null ? Number(autonomous_mode_level) : null,
       ]
     );
 
@@ -245,6 +253,8 @@ configRoutes.put('/', requireAuth, async (req, res) => {
       spotify_connected: !!cfg.spotify_access_token,
       user_msg_nonsub:  cfg.user_msg_nonsub ?? null,
       user_msg_subvip:  cfg.user_msg_subvip ?? null,
+      autonomous_mode_enabled: cfg.autonomous_mode_enabled ?? false,
+      autonomous_mode_level:   cfg.autonomous_mode_level   ?? 0,
     });
   } catch (err) {
     console.error(err);

@@ -248,11 +248,13 @@ const EMPTY = {
   members: [],
   custom_commands: [],
   event_messages: { ...EMPTY_EVENT_MESSAGES },
-  spotify_client_id:     '',
-  spotify_client_secret: '',
-  spotify_connected:     false,
-  user_msg_nonsub:       null,
-  user_msg_subvip:       null,
+  spotify_client_id:       '',
+  spotify_client_secret:   '',
+  spotify_connected:       false,
+  user_msg_nonsub:         null,
+  user_msg_subvip:         null,
+  autonomous_mode_enabled: false,
+  autonomous_mode_level:   1,
 };
 
 let _mid = 1;
@@ -320,8 +322,10 @@ export default function ConfigPage() {
           spotify_client_id:     d.spotify_client_id  ?? '',
           spotify_client_secret: '',
           spotify_connected:     d.spotify_connected  ?? false,
-          user_msg_nonsub:       d.user_msg_nonsub       ?? null,
-          user_msg_subvip:       d.user_msg_subvip       ?? null,
+          user_msg_nonsub:         d.user_msg_nonsub         ?? null,
+          user_msg_subvip:         d.user_msg_subvip         ?? null,
+          autonomous_mode_enabled: d.autonomous_mode_enabled ?? false,
+          autonomous_mode_level:   d.autonomous_mode_level   ?? 1,
         });
       })
       .catch(() => setConfig({ ...EMPTY }));
@@ -1016,6 +1020,108 @@ export default function ConfigPage() {
         </div>
 
       </div>
+
+        {/* ── MODALITÀ AUTONOMA ── */}
+        {(() => {
+          const AUTO_MAX = { free: 0, starter: 2, creator: 3, elite: 4, signature: 5 };
+          const maxLevel = AUTO_MAX[plan] ?? 0;
+          const LEVEL_LABELS = [
+            '',
+            'Il bot commenta raramente — circa ogni 50 messaggi in chat',
+            'Il bot partecipa poco — circa ogni 20 messaggi in chat',
+            'Il bot è moderatamente attivo — circa ogni 10 messaggi in chat',
+            'Il bot partecipa spesso — circa ogni 5 messaggi in chat',
+            'Il bot è molto attivo — commenta quasi ogni conversazione',
+          ];
+          if (maxLevel === 0) {
+            return (
+              <div className="card">
+                <SectionTitle>Partecipazione autonoma</SectionTitle>
+                <SectionLock message="La partecipazione autonoma è disponibile dal piano Starter." />
+              </div>
+            );
+          }
+          const level      = Math.max(1, config.autonomous_mode_level ?? 1);
+          const isOverLimit = level > maxLevel;
+          const clampedLevel = Math.min(level, maxLevel);
+          return (
+            <div className="card">
+              <SectionTitle>Partecipazione autonoma</SectionTitle>
+
+              {/* Toggle principale */}
+              <div className="flex items-center justify-between mb-5">
+                <div>
+                  <p className="text-sm font-medium text-hally-text">Partecipazione autonoma in chat</p>
+                  <p className="text-xs text-hally-text-muted mt-0.5">Il bot interviene spontaneamente senza essere chiamato</p>
+                </div>
+                <Toggle
+                  checked={config.autonomous_mode_enabled ?? false}
+                  onChange={v => set('autonomous_mode_enabled', v)}
+                />
+              </div>
+
+              {config.autonomous_mode_enabled && (
+                <div className="space-y-4 pt-1">
+                  {/* Slider frequenza */}
+                  <div>
+                    <p className="text-sm font-medium text-hally-text mb-3">Quanto spesso vuoi che il bot partecipi spontaneamente?</p>
+                    <div className="flex items-center gap-3 mb-1">
+                      <span className="text-xs text-hally-text-muted shrink-0 w-16">Silenziosa</span>
+                      <input
+                        type="range"
+                        min={1}
+                        max={maxLevel}
+                        step={1}
+                        value={clampedLevel}
+                        onChange={e => set('autonomous_mode_level', Number(e.target.value))}
+                        className="flex-1 h-1.5 rounded-full appearance-none cursor-pointer"
+                        style={{ accentColor: '#8B5CF6' }}
+                      />
+                      <span className="text-xs text-hally-text-muted shrink-0 w-20 text-right">Molto attiva</span>
+                    </div>
+                    <div className="flex justify-between px-[68px] mb-2">
+                      {Array.from({ length: maxLevel }, (_, i) => i + 1).map(n => (
+                        <span
+                          key={n}
+                          className="text-xs font-semibold tabular-nums"
+                          style={{ color: clampedLevel === n ? '#8B5CF6' : '#4b4b4b' }}
+                        >
+                          {n}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Descrizione livello / messaggio upgrade */}
+                  {isOverLimit ? (
+                    <div
+                      className="rounded-lg px-4 py-3 text-sm flex items-start gap-2"
+                      style={{ backgroundColor: 'rgba(139,92,246,0.08)', border: '1px solid rgba(139,92,246,0.25)' }}
+                    >
+                      <span className="shrink-0">🔒</span>
+                      <span style={{ color: '#c4b5fd' }}>
+                        Il livello {level} richiede un piano superiore. Aggiorna il piano per sbloccare livelli più alti.{' '}
+                        <a href="/subscription" style={{ color: '#8B5CF6', fontWeight: 600 }}>Upgrade →</a>
+                      </span>
+                    </div>
+                  ) : (
+                    <p className="text-sm" style={{ color: '#a0a0a0' }}>
+                      {LEVEL_LABELS[clampedLevel]}
+                    </p>
+                  )}
+
+                  {/* Box informativo */}
+                  <div
+                    className="rounded-lg px-4 py-3 text-sm leading-relaxed"
+                    style={{ backgroundColor: 'rgba(139,92,246,0.06)', border: '1px solid rgba(139,92,246,0.2)', color: '#a0a0a0' }}
+                  >
+                    💡 In modalità autonoma il bot legge la chat e interviene spontaneamente con commenti brevi e naturali, senza essere chiamato. I messaggi autonomi non contano nel tuo limite mensile.
+                  </div>
+                </div>
+              )}
+            </div>
+          );
+        })()}
 
         {/* ── SPOTIFY ────────────────────────────────────────────────── */}
         {['creator', 'elite', 'signature'].includes(plan) && (

@@ -89,6 +89,13 @@ const _announcementIndexes = new Map();
 // Contatore righe chat per min_chat_lines: streamerId → {count, since}
 const _chatLineCounters = new Map();
 
+// Modalità autonoma: streamerId → { count, threshold }
+const _autonomousCounters = new Map();
+// Timestamp ultima risposta autonoma: streamerId → timestamp
+const _autonomousLastReply = new Map();
+// Buffer contesto chat per risposte autonome: streamerId → string[] (max 5)
+const _autonomousContext = new Map();
+
 // Cache descrizioni emote: streamerId → [{emote_name, description}]
 const _emoteCache = new Map();
 
@@ -165,6 +172,14 @@ function uptimeString(streamerId) {
   const h  = Math.floor(ms / 3_600_000);
   const m  = Math.floor((ms % 3_600_000) / 60_000);
   return h > 0 ? `${h}h ${m}min` : `${m}min`;
+}
+
+function getAutonomousThreshold(level) {
+  const bases   = [Infinity, 50, 20, 10, 5, 2];
+  const jitters = [0,        15,  8,  4, 2, 1];
+  const base    = bases[level]   ?? Infinity;
+  const jitter  = jitters[level] ?? 0;
+  return Math.max(1, base + Math.floor(Math.random() * (jitter * 2 + 1)) - jitter);
 }
 
 function checkEventCooldown(streamerId, type, username) {
@@ -1006,7 +1021,9 @@ async function loadActiveStreamers() {
       bc.song_req_subvip,
       bc.event_messages,
       bc.social_links,
-      bc.stream_schedule
+      bc.stream_schedule,
+      bc.autonomous_mode_enabled,
+      bc.autonomous_mode_level
     FROM streamers s
     JOIN bot_configs bc ON bc.streamer_id = s.id
     WHERE s.twitch_username IS NOT NULL
@@ -1420,9 +1437,15 @@ class BotManager {
 
     // 7. Comando AI principale: !<nome_bot>
     const botCmd = '!' + (streamer.bot_name || 'streambot').toLowerCase().replace(/\s+/g, '');
-    if (!lowerMsg.startsWith(botCmd)) return;
+    if (lowerMsg.startsWith(botCmd)) {
+      await this._handleBotCommand(channel, tags, streamer, msg, username, isSub, botCmd);
+      return;
+    }
 
-    await this._handleBotCommand(channel, tags, streamer, msg, username, isSub, botCmd);
+    // 8. Modalità autonoma — solo messaggi non-comandi
+    if (!lowerMsg.startsWith('!')) {
+      this._handleAutonomousMessage(channel, tags, streamer, msg, username).catch(() => {});
+    }
   }
 
   // ── Carica emote in cache ─────────────────────────────────────────────────
@@ -1435,6 +1458,68 @@ class BotManager {
       _emoteCache.set(streamerId, rows);
     } catch (e) {
       console.warn('[Emotes] _loadEmotes:', e.message);
+    }
+  }
+
+  // ── Modalità autonoma ─────────────────────────────────────────────────────
+  async _handleAutonomousMessage(channel, tags, streamer, msg, username) {
+    const streamerId = streamer.streamer_id;
+    if (!streamer.autonomous_mode_enabled) return;
+
+    const limits = getLimits(streamer.subscription_plan);
+    const level  = Math.min(
+      Math.max(0, streamer.autonomous_mode_level ?? 0),
+      limits.autonomousMaxLevel ?? 0,
+    );
+    if (level === 0) return;
+
+    // Ignora utenti con badge bot
+    if (tags?.badges?.bot) return;
+
+    // Aggiorna buffer contesto (ultimi 5 messaggi, max 150 caratteri ciascuno)
+    const ctx = _autonomousContext.get(streamerId) ?? [];
+    ctx.push(`${username}: ${msg.slice(0, 150)}`);
+    if (ctx.length > 5) ctx.shift();
+    _autonomousContext.set(streamerId, ctx);
+
+    // Cooldown anti-spam: no risposta se ne ha già inviata negli ultimi 30s
+    if (Date.now() - (_autonomousLastReply.get(streamerId) ?? 0) < 30_000) return;
+
+    // Incrementa contatore
+    let counter = _autonomousCounters.get(streamerId);
+    if (!counter) {
+      counter = { count: 0, threshold: getAutonomousThreshold(level) };
+      _autonomousCounters.set(streamerId, counter);
+    }
+    counter.count++;
+    if (counter.count < counter.threshold) return;
+
+    // Soglia raggiunta: reset con nuova soglia randomizzata
+    counter.count     = 0;
+    counter.threshold = getAutonomousThreshold(level);
+    _autonomousLastReply.set(streamerId, Date.now());
+
+    const contextText = ctx.join('\n');
+    const personality = (streamer.bot_personality || '').trim();
+    const system = [
+      personality,
+      'Stai partecipando spontaneamente alla conversazione in chat come faresti in una chat Twitch.',
+      'Rispondi in MASSIMO 80 caratteri, stile commento veloce e naturale da utente in chat.',
+      'Niente spiegazioni lunghe, niente presentazioni. Solo un commento breve, diretto, coerente con la tua personalità.',
+      'Puoi usare emote del canale se appropriato.',
+      'Esempi di stile: "bella idea pushare così 😄", "LOL ci sei quasi", "questa run sta andando forte"',
+    ].filter(Boolean).join('\n');
+    const prompt = `Ultimi messaggi in chat:\n${contextText}\n\nRispondi con un brevissimo commento spontaneo (max 80 caratteri).`;
+
+    try {
+      const raw = await gemini(system, prompt, 100, 0);
+      if (raw) {
+        const reply = raw.trim().slice(0, 200);
+        await this.client.say(channel, reply).catch(() => {});
+        console.log(`[Autonomous] @${streamer.twitch_username} → ${reply}`);
+      }
+    } catch (e) {
+      console.warn('[Autonomous]', e.message);
     }
   }
 
@@ -2215,6 +2300,8 @@ class BotManager {
       channelHistory.delete(streamer.streamer_id);
       lurkSessionUsers.delete(streamer.streamer_id);
       sessionActiveUsers.delete(streamer.streamer_id);
+      _autonomousCounters.delete(streamer.streamer_id);
+      _autonomousContext.delete(streamer.streamer_id);
       console.log(`[Bot] Stream offline: #${streamer.twitch_username} — contatori sessione azzerati`);
       return;
     }

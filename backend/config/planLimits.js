@@ -21,6 +21,7 @@ export const PLAN_LIMITS = {
     analytics:           false,
     customEventMessages: false,
     trial:               false,
+    autonomousMaxLevel:  0,
 
     events: ['follow', 'subscribe', 'gift_sub', 'cheer', 'raid', 'hype_train'],
 
@@ -39,6 +40,7 @@ export const PLAN_LIMITS = {
     analytics:           false,
     customEventMessages: false,
     trial:               7, // giorni
+    autonomousMaxLevel:  2,
 
     // Risposte automatiche eventi Twitch
     events: ['follow', 'subscribe', 'gift_sub', 'cheer', 'hype_train', 'raid'],
@@ -62,6 +64,7 @@ export const PLAN_LIMITS = {
     analytics:           false,
     customEventMessages: false,
     trial:               7,
+    autonomousMaxLevel:  3,
 
     events: ['follow', 'subscribe', 'gift_sub', 'cheer', 'hype_train', 'raid'],
 
@@ -83,6 +86,7 @@ export const PLAN_LIMITS = {
     analytics:           true,
     customEventMessages: true,
     trial:               7,
+    autonomousMaxLevel:  4,
 
     events: ['follow', 'subscribe', 'gift_sub', 'cheer', 'hype_train', 'raid'],
 
@@ -104,6 +108,7 @@ export const PLAN_LIMITS = {
     analytics:           true,
     customEventMessages: true,
     trial:               false, // nessun trial — contatto diretto
+    autonomousMaxLevel:  5,
 
     events: ['follow', 'subscribe', 'gift_sub', 'cheer', 'hype_train', 'raid'],
 
