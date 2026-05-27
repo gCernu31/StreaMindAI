@@ -175,85 +175,6 @@ const plans = [
 
 
 // ---------------------------------------------------------------------------
-// Mockup chat Twitch animato
-// ---------------------------------------------------------------------------
-
-const chatMessages = [
-  { user: 'darkwolf_99',  color: '#9147ff', text: '!bot qual è il tuo gioco preferito?' },
-  { user: 'StreaMindAI', color: PURPLE, badge: 'BOT', text: 'Dipende dall\'umore! Ma se mi costringi a scegliere… God of War. gCernu ne ha parlato per ore 😄' },
-  { user: 'streamer_fan', color: '#00c8ff', text: '!sr Blinding Lights - The Weeknd' },
-  { user: 'StreaMindAI', color: PURPLE, badge: 'BOT', text: '✅ Aggiunta alla coda Spotify! Posizione #2 🎵' },
-  { user: 'luigi_gamer',  color: '#ff4e6a', text: 'primo follow della serata!' },
-  { user: 'StreaMindAI', color: PURPLE, badge: 'BOT', text: '🎉 Benvenuto luigi_gamer! Primo follow = cuore speciale nel nostro stream ❤️' },
-  { user: 'marta_plays',  color: '#43b581', text: '!bot cosa sta giocando oggi?' },
-  { user: 'StreaMindAI', color: PURPLE, badge: 'BOT', text: 'Oggi è serata Elden Ring! gCernu ha giurato di finire il boss stasera… vedremo 😂' },
-];
-
-function TwitchChatMockup() {
-  const [visible, setVisible] = useState(2);
-
-  useEffect(() => {
-    if (visible >= chatMessages.length) return;
-    const t = setTimeout(() => setVisible((v) => v + 1), 1400);
-    return () => clearTimeout(t);
-  }, [visible]);
-
-  return (
-    <div className="w-full max-w-sm rounded-xl overflow-hidden border border-[#2a2a2a] bg-[#18181b] shadow-2xl shadow-black/60 font-sans">
-      {/* Barra titolo */}
-      <div className="bg-[#0e0e10] px-4 py-3 flex items-center justify-between border-b border-[#2a2a2a]">
-        <div className="flex items-center gap-2">
-          <div className="flex gap-1.5">
-            <span className="w-3 h-3 rounded-full bg-[#ff5f57]"></span>
-            <span className="w-3 h-3 rounded-full bg-[#febc2e]"></span>
-            <span className="w-3 h-3 rounded-full bg-[#28c840]"></span>
-          </div>
-          <span className="text-[#efeff1] text-xs font-medium ml-2">💬 Chat — #gcernu</span>
-        </div>
-        <div className="flex items-center gap-1.5">
-          <span className="w-1.5 h-1.5 bg-red-500 rounded-full animate-pulse"></span>
-          <span className="text-[#bf94ff] text-xs font-semibold">LIVE</span>
-          <span className="text-[#adadb8] text-xs ml-1">1.2k</span>
-        </div>
-      </div>
-
-      {/* Messaggi */}
-      <div className="px-3 py-3 space-y-2.5 min-h-[280px]">
-        {chatMessages.slice(0, visible).map((msg, i) => (
-          <div key={i} className="text-sm leading-snug" style={{ animation: 'fadeInUp 0.3s ease-out' }}>
-            {msg.badge && (
-              <span
-                className="inline-block text-[10px] font-bold px-1.5 py-0.5 rounded mr-1.5 align-middle"
-                style={{ backgroundColor: PURPLE, color: '#fff' }}
-              >
-                {msg.badge}
-              </span>
-            )}
-            <span className="font-bold" style={{ color: msg.color }}>{msg.user}</span>
-            <span className="text-[#adadb8]">: </span>
-            <span className={msg.badge ? 'text-[#efeff1]' : 'text-[#c0c0c0]'}>{msg.text}</span>
-          </div>
-        ))}
-      </div>
-
-      {/* Input bar */}
-      <div className="border-t border-[#2a2a2a] px-3 py-2.5">
-        <div className="bg-[#3a3a3d] rounded-md px-3 py-2 text-xs text-[#adadb8]">
-          Invia un messaggio…
-        </div>
-      </div>
-
-      <style>{`
-        @keyframes fadeInUp {
-          from { opacity: 0; transform: translateY(6px); }
-          to   { opacity: 1; transform: translateY(0); }
-        }
-      `}</style>
-    </div>
-  );
-}
-
-
 
 // ---------------------------------------------------------------------------
 // Header
@@ -471,11 +392,6 @@ export default function LandingPage({ user, loading, onLogout }) {
               <p className="mt-6 text-sm" style={{ color: '#6b6b6b' }}>
                 7 giorni di prova — nessun addebito oggi · Annulla quando vuoi
               </p>
-            </div>
-
-            {/* Mockup chat */}
-            <div className="flex-shrink-0 w-full lg:w-auto flex justify-center">
-              <TwitchChatMockup />
             </div>
           </div>
         </div>
