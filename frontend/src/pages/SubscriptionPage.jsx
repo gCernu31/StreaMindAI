@@ -20,7 +20,7 @@ const PLANS = [
   {
     id: 'starter',
     name: 'Starter',
-    price: 7.99,
+    price: 4.99,
     features: [
       'Bot AI base con personalità configurabile',
       'Max 10 membri configurabili',
@@ -33,7 +33,7 @@ const PLANS = [
   {
     id: 'creator',
     name: 'Creator',
-    price: 22,
+    price: 9.99,
     features: [
       'Bot AI completamente personalizzato',
       'Fino a 20 membri configurabili',
@@ -48,7 +48,7 @@ const PLANS = [
   {
     id: 'elite',
     name: 'Elite',
-    price: 70,
+    price: 19.99,
     highlight: true,
     badge: 'Più popolare',
     features: [
@@ -62,7 +62,7 @@ const PLANS = [
   {
     id: 'signature',
     name: 'Signature',
-    price: 165,
+    price: 39.99,
     features: [
       'Tutto di Elite',
       'Onboarding 1:1 con gCernu',
@@ -76,10 +76,10 @@ const PLANS = [
 
 // ─── Prezzi plurimensili ──────────────────────────────────────────────────────
 const MULTI_PERIOD = {
-  starter:   { '3m': { total: 21.57,  monthly: 7.19,  discount: 10 }, '6m': { total: 40.75,  monthly: 6.79,  discount: 15 }, '12m': { total: 76.70,  monthly: 6.39,  discount: 20 } },
-  creator:   { '3m': { total: 59.40,  monthly: 19.80, discount: 10 }, '6m': { total: 112.20, monthly: 18.70, discount: 15 }, '12m': { total: 211.20, monthly: 17.60, discount: 20 } },
-  elite:     { '3m': { total: 189.00, monthly: 63.00, discount: 10 }, '6m': { total: 357.00, monthly: 59.50, discount: 15 }, '12m': { total: 672.00, monthly: 56.00, discount: 20 } },
-  signature: { '3m': { total: 445.50, monthly: 148.50,discount: 10 }, '6m': { total: 841.50, monthly: 140.25,discount: 15 }, '12m': { total: 1584.00,monthly: 132.00,discount: 20 } },
+  starter:   { '3m': { total: 13.47,  monthly: 4.49,  discount: 10 }, '6m': { total: 25.45,  monthly: 4.24,  discount: 15 }, '12m': { total: 47.90,  monthly: 3.99,  discount: 20 } },
+  creator:   { '3m': { total: 26.97,  monthly: 8.99,  discount: 10 }, '6m': { total: 50.95,  monthly: 8.49,  discount: 15 }, '12m': { total: 95.90,  monthly: 7.99,  discount: 20 } },
+  elite:     { '3m': { total: 53.97,  monthly: 17.99, discount: 10 }, '6m': { total: 101.95, monthly: 16.99, discount: 15 }, '12m': { total: 191.90, monthly: 15.99, discount: 20 } },
+  signature: { '3m': { total: 107.97, monthly: 35.99, discount: 10 }, '6m': { total: 203.95, monthly: 33.99, discount: 15 }, '12m': { total: 383.90, monthly: 31.99, discount: 20 } },
 };
 
 const PERIOD_OPTS = [
@@ -210,8 +210,8 @@ function SignatureContactModal({ onClose }) {
                 value={form.piano}
                 onChange={e => set('piano', e.target.value)}
               >
-                <option value="Signature">Signature — 165€/mese</option>
-                <option value="Elite">Elite — 70€/mese</option>
+                <option value="Signature">Signature — 39,99€/mese</option>
+                <option value="Elite">Elite — 19,99€/mese</option>
               </select>
             </div>
             <div>
@@ -699,7 +699,7 @@ export default function SubscriptionPage() {
                 <p className="text-xs text-hally-text-muted mt-0.5">Validi 30 giorni dall'acquisto</p>
               </div>
               <div className="text-right shrink-0">
-                <span className="text-2xl font-extrabold" style={{ color: '#8B5CF6' }}>3€</span>
+                <span className="text-2xl font-extrabold" style={{ color: '#8B5CF6' }}>0,99€</span>
                 <p className="text-xs text-hally-text-muted">una tantum</p>
               </div>
             </div>
@@ -716,7 +716,7 @@ export default function SubscriptionPage() {
               onMouseEnter={e => { if (!tokenPackLoading) e.currentTarget.style.backgroundColor = '#7C3AED'; }}
               onMouseLeave={e => { e.currentTarget.style.backgroundColor = '#8B5CF6'; }}
             >
-              {tokenPackLoading ? 'Reindirizzamento…' : 'Acquista — 3€'}
+              {tokenPackLoading ? 'Reindirizzamento…' : 'Acquista — 0,99€'}
             </button>
           </div>
 

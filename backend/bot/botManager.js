@@ -994,6 +994,15 @@ Rispondi SOLO con il messaggio.`;
 
   const _r2 = await gemini(system, desc, 256, 0);
   const raw = _r2?.text ?? null;
+  const tokens = _r2?.tokens ?? 0;
+  if (tokens > 0) {
+    await pool.query(
+      'UPDATE streamers SET monthly_tokens_used = monthly_tokens_used + $1 WHERE id = $2',
+      [tokens, streamer.streamer_id]
+    );
+  } else {
+    console.warn('[Tokens] usageMetadata assente o zero per streamer_id:', streamer.streamer_id);
+  }
   return truncate(raw, 200) ?? fallback[eventType] ?? null;
 }
 

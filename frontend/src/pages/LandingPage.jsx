@@ -110,7 +110,7 @@ const plans = [
   {
     id: 'starter',
     name: 'Starter',
-    price: '7,99',
+    price: '4,99',
     desc: 'Per chi inizia',
     features: [
       'Bot AI base con personalità configurabile',
@@ -125,7 +125,7 @@ const plans = [
   {
     id: 'creator',
     name: 'Creator',
-    price: '22',
+    price: '9,99',
     desc: 'Per streamer in crescita',
     features: [
       'Bot AI completamente personalizzato',
@@ -141,7 +141,7 @@ const plans = [
   {
     id: 'elite',
     name: 'Elite',
-    price: '70',
+    price: '19,99',
     desc: 'Il più scelto',
     badge: 'Più popolare',
     features: [
@@ -158,7 +158,7 @@ const plans = [
   {
     id: 'signature',
     name: 'Signature',
-    price: '165',
+    price: '39,99',
     desc: 'Il massimo, senza limiti',
     features: [
       'Tutto di Elite',
@@ -546,10 +546,10 @@ const STRUCTURED_DATA_APP = {
   url: 'https://streamindai.com',
   offers: [
     { '@type': 'Offer', name: 'Free',      price: '0.00',   priceCurrency: 'EUR', description: 'Bot AI di base, eventi automatici, nessuna carta richiesta' },
-    { '@type': 'Offer', name: 'Starter',   price: '7.99',   priceCurrency: 'EUR', description: 'Bot AI base, 1,5M token AI/mese, trial 7 giorni' },
-    { '@type': 'Offer', name: 'Creator',   price: '22.00',  priceCurrency: 'EUR', description: 'Song request Spotify, 8M token AI/mese, trial 7 giorni' },
-    { '@type': 'Offer', name: 'Elite',     price: '70.00',  priceCurrency: 'EUR', description: 'Analytics, memoria avanzata, 25M token AI/mese, trial 7 giorni' },
-    { '@type': 'Offer', name: 'Signature', price: '165.00', priceCurrency: 'EUR', description: 'Onboarding 1:1, setup personalizzato, 60M token AI/mese' },
+    { '@type': 'Offer', name: 'Starter',   price: '4.99',   priceCurrency: 'EUR', description: 'Bot AI base, 1,5M token AI/mese, trial 7 giorni' },
+    { '@type': 'Offer', name: 'Creator',   price: '9.99',   priceCurrency: 'EUR', description: 'Song request Spotify, 8M token AI/mese, trial 7 giorni' },
+    { '@type': 'Offer', name: 'Elite',     price: '19.99',  priceCurrency: 'EUR', description: 'Analytics, memoria avanzata, 25M token AI/mese, trial 7 giorni' },
+    { '@type': 'Offer', name: 'Signature', price: '39.99',  priceCurrency: 'EUR', description: 'Onboarding 1:1, setup personalizzato, 60M token AI/mese' },
   ],
 };
 
