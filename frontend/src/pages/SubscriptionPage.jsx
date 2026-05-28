@@ -656,7 +656,7 @@ export default function SubscriptionPage() {
           <span className="text-green-400 text-xl shrink-0">✓</span>
           <div>
             <p className="text-sm font-semibold text-hally-text">Token Pack acquistato!</p>
-            <p className="text-xs text-hally-text-muted mt-0.5">1.000.000 token extra sono stati aggiunti al tuo account. Validi 30 giorni.</p>
+            <p className="text-xs text-hally-text-muted mt-0.5">500.000 token extra sono stati aggiunti al tuo account. Validi 30 giorni.</p>
           </div>
         </div>
       )}
@@ -695,11 +695,11 @@ export default function SubscriptionPage() {
           >
             <div className="flex items-start justify-between gap-3">
               <div>
-                <p className="font-bold text-hally-text">1.000.000 token extra</p>
+                <p className="font-bold text-hally-text">500.000 token extra</p>
                 <p className="text-xs text-hally-text-muted mt-0.5">Validi 30 giorni dall'acquisto</p>
               </div>
               <div className="text-right shrink-0">
-                <span className="text-2xl font-extrabold" style={{ color: '#8B5CF6' }}>0,99€</span>
+                <span className="text-2xl font-extrabold" style={{ color: '#8B5CF6' }}>1,50€</span>
                 <p className="text-xs text-hally-text-muted">una tantum</p>
               </div>
             </div>
@@ -716,7 +716,7 @@ export default function SubscriptionPage() {
               onMouseEnter={e => { if (!tokenPackLoading) e.currentTarget.style.backgroundColor = '#7C3AED'; }}
               onMouseLeave={e => { e.currentTarget.style.backgroundColor = '#8B5CF6'; }}
             >
-              {tokenPackLoading ? 'Reindirizzamento…' : 'Acquista — 0,99€'}
+              {tokenPackLoading ? 'Reindirizzamento…' : 'Acquista — 1,50€'}
             </button>
           </div>
 

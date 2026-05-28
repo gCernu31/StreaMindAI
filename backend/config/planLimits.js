@@ -140,9 +140,10 @@ export const PLAN_LABELS = {
 
 /** Prezzi mensili in euro */
 export const PLAN_PRICES = {
-  free:      0,
-  starter:   4.99,
-  creator:   9.99,
-  elite:     19.99,
-  signature: 39.99,
+  free:       0,
+  starter:    4.99,
+  creator:    9.99,
+  elite:      19.99,
+  signature:  39.99,
+  token_pack: 1.50,
 };

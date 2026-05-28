@@ -35,8 +35,8 @@ const PERIOD_PRICE_IDS = {
 };
 
 const TOKEN_PACK = {
-  priceId: process.env.STRIPE_PRICE_TOKEN_PACK, // prodotto one-time 0,99€ su Stripe
-  tokens:  1_000_000,
+  priceId: process.env.STRIPE_PRICE_TOKEN_PACK, // prodotto one-time 1,50€ su Stripe
+  tokens:  500_000,
   days:    30,
 };
 
