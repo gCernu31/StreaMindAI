@@ -180,19 +180,19 @@ const plans = [
 // Demo Section — chat simulata + 3 step
 // ---------------------------------------------------------------------------
 
-const DEMO_MSGS = [
+function getDemoMsgs(ch) { return [
   { type: 'user',  user: 'GinoHernandez', color: '#00c8ff', text: 'quanto sei bravo su questo gioco dai' },
-  { type: 'bot',   text: 'Grazie Gino! gcernu si sta davvero superando stasera 🎮' },
+  { type: 'bot',   text: `Grazie Gino! ${ch} si sta davvero superando stasera 🎮` },
   { type: 'user',  user: 'Millina',        color: '#ff69b4', text: '!nexis chi sono io per te?' },
   { type: 'bot',   text: 'Millina! La preferita della chat, lo sai benissimo 😄' },
   { type: 'event', text: '⭐ TheRealSam ha seguito il canale!' },
   { type: 'bot',   text: 'Benvenuto @TheRealSam! Che bello averti qui 🎃' },
   { type: 'user',  user: 'Insane_x',       color: '#ffa500', text: '!nexis di che gioco si tratta?' },
-  { type: 'bot',   text: 'Stiamo giocando a Rocket League — gcernu sta dominando 🚀' },
+  { type: 'bot',   text: `Stiamo giocando a Rocket League — ${ch} sta dominando 🚀` },
   { type: 'bot',   text: 'Bella partita eh? Chi tifa per il goal? ⚡' },
   { type: 'user',  user: 'GinoHernandez',  color: '#00c8ff', text: '!lurk' },
   { type: 'bot',   text: 'Gino è in modalità lurk — silenzioso ma presente! 👀' },
-];
+]; }
 
 function DemoBotInput() {
   const [txt, setTxt] = useState('');
@@ -226,7 +226,7 @@ function DemoBotInput() {
   );
 }
 
-function DemoChatPanel() {
+function DemoChatPanel({ channel }) {
   const [msgs, setMsgs]         = useState([]);
   const [typing, setTyping]     = useState(false);
   const [viewers, setViewers]   = useState(234);
@@ -248,11 +248,12 @@ function DemoChatPanel() {
   useEffect(() => {
     let i = 0;
     function next() {
-      if (i >= DEMO_MSGS.length) {
+      const demoMsgs = getDemoMsgs(channel);
+      if (i >= demoMsgs.length) {
         tidRef.current = setTimeout(() => { setMsgs([]); setTyping(false); i = 0; tidRef.current = setTimeout(next, 800); }, 3200);
         return;
       }
-      const m = DEMO_MSGS[i];
+      const m = demoMsgs[i];
       if (m.type === 'bot') {
         setTyping(true);
         tidRef.current = setTimeout(() => {
@@ -293,7 +294,7 @@ function DemoChatPanel() {
             </svg>
           </div>
           <div>
-            <span className="text-sm font-bold block leading-tight" style={{ color: '#fff' }}>gcernu</span>
+            <span className="text-sm font-bold block leading-tight" style={{ color: '#fff' }}>{channel}</span>
             <span className="text-xs" style={{ color: '#555' }}>Rocket League</span>
           </div>
           <div className="flex items-center gap-1 text-xs font-bold px-2 py-0.5 rounded-full ml-1"
@@ -324,7 +325,7 @@ function DemoChatPanel() {
               </div>
             ) : m.type === 'bot' ? (
               <div className="flex items-start gap-1.5 flex-wrap">
-                <span className="text-sm font-bold shrink-0" style={{ color: '#8B5CF6' }}>NexisAI</span>
+                <span className="text-sm font-bold shrink-0" style={{ color: '#8B5CF6' }}>StreaMindAI</span>
                 <span className="text-sm shrink-0" style={{ color: '#555' }}>🤖:</span>
                 <span className="text-sm leading-snug" style={{ color: '#ddd' }}>{m.text}</span>
               </div>
@@ -338,7 +339,7 @@ function DemoChatPanel() {
         ))}
         {typing && (
           <div className="flex items-center gap-1.5">
-            <span className="text-sm font-bold" style={{ color: '#8B5CF6' }}>NexisAI</span>
+            <span className="text-sm font-bold" style={{ color: '#8B5CF6' }}>StreaMindAI</span>
             <span className="text-sm" style={{ color: '#555' }}>🤖</span>
             <div className="flex items-center gap-1 ml-1">
               {[0,1,2].map(k => (
@@ -454,7 +455,7 @@ function DemoSection({ user }) {
             </div>
 
             {/* CTA */}
-            <div className="mt-6 flex flex-col items-center text-center">
+            <div className="mt-6 flex flex-col items-center text-center mx-auto">
               <h3 className="text-xl font-extrabold mb-2"
                 style={{ background:'linear-gradient(90deg,#fff 0%,#a78bfa 55%,#8B5CF6 100%)',
                   WebkitBackgroundClip:'text', WebkitTextFillColor:'transparent', backgroundClip:'text' }}>
@@ -480,7 +481,7 @@ function DemoSection({ user }) {
 
           {/* ── Destra: chat grande ──────────────────────────────────── */}
           <div className="lg:w-[62%] w-full">
-            <DemoChatPanel />
+            <DemoChatPanel channel={user?.twitch_username || 'il tuo canale'} />
           </div>
         </div>
       </div>
