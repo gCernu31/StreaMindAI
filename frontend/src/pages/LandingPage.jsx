@@ -183,11 +183,11 @@ const plans = [
 function getDemoMsgs(ch) { return [
   { type: 'user',  user: 'GinoHernandez', color: '#00c8ff', text: 'quanto sei bravo su questo gioco dai' },
   { type: 'bot',   text: `Grazie Gino! ${ch} si sta davvero superando stasera 🎮` },
-  { type: 'user',  user: 'Millina',        color: '#ff69b4', text: '!nexis chi sono io per te?' },
+  { type: 'user',  user: 'Millina',        color: '#ff69b4', text: '!hally chi sono io per te?' },
   { type: 'bot',   text: 'Millina! La preferita della chat, lo sai benissimo 😄' },
   { type: 'event', text: '⭐ TheRealSam ha seguito il canale!' },
   { type: 'bot',   text: 'Benvenuto @TheRealSam! Che bello averti qui 🎃' },
-  { type: 'user',  user: 'Insane_x',       color: '#ffa500', text: '!nexis di che gioco si tratta?' },
+  { type: 'user',  user: 'Insane_x',       color: '#ffa500', text: '!hally di che gioco si tratta?' },
   { type: 'bot',   text: `Stiamo giocando a Rocket League — ${ch} sta dominando 🚀` },
   { type: 'bot',   text: 'Bella partita eh? Chi tifa per il goal? ⚡' },
   { type: 'user',  user: 'GinoHernandez',  color: '#00c8ff', text: '!lurk' },
