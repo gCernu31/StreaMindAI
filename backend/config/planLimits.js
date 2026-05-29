@@ -41,7 +41,7 @@ export const PLAN_LIMITS = {
     analytics:           false,
     customEventMessages: false,
     trial:               7,
-    autonomousMaxLevel:  2,
+    autonomousMaxLevel:  3,
 
     events: ['follow', 'subscribe', 'gift_sub', 'cheer', 'hype_train', 'raid'],
 
@@ -87,7 +87,7 @@ export const PLAN_LIMITS = {
     analytics:           true,
     customEventMessages: true,
     trial:               7,
-    autonomousMaxLevel:  4,
+    autonomousMaxLevel:  3,
 
     events: ['follow', 'subscribe', 'gift_sub', 'cheer', 'hype_train', 'raid'],
 
@@ -110,7 +110,7 @@ export const PLAN_LIMITS = {
     analytics:           true,
     customEventMessages: true,
     trial:               false,
-    autonomousMaxLevel:  5,
+    autonomousMaxLevel:  3,
 
     events: ['follow', 'subscribe', 'gift_sub', 'cheer', 'hype_train', 'raid'],
 

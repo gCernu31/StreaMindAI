@@ -175,8 +175,8 @@ function uptimeString(streamerId) {
 }
 
 function getAutonomousThreshold(level) {
-  const bases   = [Infinity, 50, 20, 10, 5, 2];
-  const jitters = [0,        15,  8,  4, 2, 1];
+  const bases   = [Infinity, 50, 20, 10];
+  const jitters = [0,        15,  8,  4];
   const base    = bases[level]   ?? Infinity;
   const jitter  = jitters[level] ?? 0;
   return Math.max(1, base + Math.floor(Math.random() * (jitter * 2 + 1)) - jitter);

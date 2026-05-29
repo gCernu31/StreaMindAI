@@ -598,21 +598,19 @@ export default function ConfigPage() {
 
         {/* ── PARTECIPAZIONE AUTONOMA ── */}
         {(() => {
-          const AUTO_MAX   = { free: 0, starter: 2, creator: 3, elite: 4, signature: 5 };
+          const AUTO_MAX   = { free: 0, starter: 3, creator: 3, elite: 3, signature: 3 };
           const maxLevel   = AUTO_MAX[plan] ?? 0;
           const enabled    = config.autonomous_mode_enabled ?? false;
           const level      = Math.max(1, config.autonomous_mode_level ?? 1);
-          const clampedLvl = maxLevel > 0 ? Math.min(level, maxLevel) : level;
+          const clampedLvl = maxLevel > 0 ? Math.min(level, maxLevel) : Math.min(level, 3);
 
           const LEVEL_INFO = [
             null,
-            { dot: '🟢', bg: 'rgba(74,222,128,0.08)',  border: 'rgba(74,222,128,0.25)',  color: '#4ade80', text: 'Circa ogni 50 messaggi — quasi invisibile' },
-            { dot: '🟡', bg: 'rgba(250,204,21,0.08)',  border: 'rgba(250,204,21,0.25)',  color: '#facc15', text: 'Circa ogni 20 messaggi — discreto' },
-            { dot: '🟠', bg: 'rgba(251,146,60,0.08)',  border: 'rgba(251,146,60,0.25)',  color: '#fb923c', text: 'Circa ogni 10 messaggi — presente' },
-            { dot: '🔴', bg: 'rgba(248,113,113,0.08)', border: 'rgba(248,113,113,0.25)', color: '#f87171', text: 'Circa ogni 5 messaggi — molto attivo' },
-            { dot: '🔴', bg: 'rgba(248,113,113,0.08)', border: 'rgba(248,113,113,0.25)', color: '#f87171', text: 'Ogni 2 messaggi — dominante' },
+            { dot: '🟢', bg: 'rgba(74,222,128,0.08)',  border: 'rgba(74,222,128,0.25)',  color: '#4ade80', text: 'Circa ogni 50 messaggi — discreto' },
+            { dot: '🟡', bg: 'rgba(250,204,21,0.08)',  border: 'rgba(250,204,21,0.25)',  color: '#facc15', text: 'Circa ogni 20 messaggi — presente' },
+            { dot: '🔴', bg: 'rgba(248,113,113,0.08)', border: 'rgba(248,113,113,0.25)', color: '#f87171', text: 'Circa ogni 10 messaggi — molto attivo' },
           ];
-          const info = LEVEL_INFO[Math.min(clampedLvl, 5)];
+          const info = LEVEL_INFO[Math.min(clampedLvl, 3)];
 
           return (
             <div style={{
@@ -732,25 +730,6 @@ export default function ConfigPage() {
                           </div>
                         )}
 
-                        {/* Warning piano Starter al livello massimo */}
-                        {plan === 'starter' && clampedLvl >= maxLevel && (
-                          <div style={{
-                            display: 'flex', alignItems: 'flex-start', gap: '0.5rem',
-                            marginTop: '0.875rem', padding: '0.625rem 0.875rem',
-                            borderRadius: '0.5rem',
-                            backgroundColor: 'rgba(250,204,21,0.05)',
-                            border: '1px solid rgba(250,204,21,0.18)',
-                            color: '#d4b83c', fontSize: '0.75rem', lineHeight: 1.5,
-                          }}>
-                            <span style={{ flexShrink: 0 }}>⚠️</span>
-                            <span>
-                              Il tuo piano Starter supporta fino al livello 2.{' '}
-                              <a href="/subscription" style={{ color: '#a78bfa', fontWeight: 600 }}>
-                                Passa a Creator per livelli più alti →
-                              </a>
-                            </span>
-                          </div>
-                        )}
 
                       </div>
                     </div>
