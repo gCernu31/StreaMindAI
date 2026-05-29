@@ -596,6 +596,194 @@ export default function ConfigPage() {
           </div>
         </div>
 
+        {/* ── PARTECIPAZIONE AUTONOMA ── */}
+        {(() => {
+          const AUTO_MAX   = { free: 0, starter: 2, creator: 3, elite: 4, signature: 5 };
+          const maxLevel   = AUTO_MAX[plan] ?? 0;
+          const enabled    = config.autonomous_mode_enabled ?? false;
+          const level      = Math.max(1, config.autonomous_mode_level ?? 1);
+          const clampedLvl = maxLevel > 0 ? Math.min(level, maxLevel) : level;
+
+          const LEVEL_INFO = [
+            null,
+            { dot: '🟢', bg: 'rgba(74,222,128,0.08)',  border: 'rgba(74,222,128,0.25)',  color: '#4ade80', text: 'Circa ogni 50 messaggi — quasi invisibile' },
+            { dot: '🟡', bg: 'rgba(250,204,21,0.08)',  border: 'rgba(250,204,21,0.25)',  color: '#facc15', text: 'Circa ogni 20 messaggi — discreto' },
+            { dot: '🟠', bg: 'rgba(251,146,60,0.08)',  border: 'rgba(251,146,60,0.25)',  color: '#fb923c', text: 'Circa ogni 10 messaggi — presente' },
+            { dot: '🔴', bg: 'rgba(248,113,113,0.08)', border: 'rgba(248,113,113,0.25)', color: '#f87171', text: 'Circa ogni 5 messaggi — molto attivo' },
+            { dot: '🔴', bg: 'rgba(248,113,113,0.08)', border: 'rgba(248,113,113,0.25)', color: '#f87171', text: 'Ogni 2 messaggi — dominante' },
+          ];
+          const info = LEVEL_INFO[Math.min(clampedLvl, 5)];
+
+          return (
+            <div style={{
+              borderRadius: '0.875rem',
+              border: `1px solid ${enabled ? 'rgba(139,92,246,0.45)' : 'rgba(139,92,246,0.18)'}`,
+              boxShadow: enabled
+                ? '0 0 30px rgba(139,92,246,0.18), 0 2px 8px rgba(0,0,0,0.4)'
+                : '0 1px 4px rgba(0,0,0,0.3)',
+              overflow: 'hidden',
+              transition: 'border-color 0.3s ease, box-shadow 0.3s ease',
+            }}>
+
+              {/* Header gradiente */}
+              <div style={{
+                background: 'linear-gradient(135deg, #1a0a2e 0%, #0d0619 100%)',
+                padding: '1.125rem 1.5rem',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                gap: '1rem',
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.875rem' }}>
+                  <span style={{
+                    fontSize: '1.375rem', lineHeight: 1,
+                    filter: enabled ? 'drop-shadow(0 0 7px rgba(167,139,250,0.9))' : 'none',
+                    transition: 'filter 0.3s ease',
+                  }}>⚡</span>
+                  <div>
+                    <p style={{ fontWeight: 700, color: '#ffffff', fontSize: '0.9375rem', margin: 0, lineHeight: 1.25 }}>
+                      Partecipazione autonoma
+                    </p>
+                    <p style={{ color: '#a78bfa', fontSize: '0.75rem', margin: 0, marginTop: '0.2rem' }}>
+                      Il bot interviene spontaneamente in chat senza essere chiamato
+                    </p>
+                  </div>
+                </div>
+                {maxLevel > 0
+                  ? <Toggle checked={enabled} onChange={v => set('autonomous_mode_enabled', v)} />
+                  : <span className="text-xs px-2.5 py-1 rounded-full font-semibold" style={{ backgroundColor: 'rgba(139,92,246,0.08)', color: '#7c6aad', border: '1px solid rgba(139,92,246,0.18)' }}>Locked</span>
+                }
+              </div>
+
+              {/* Corpo card */}
+              <div style={{ backgroundColor: '#08060e', padding: '1.25rem 1.5rem' }}>
+
+                {maxLevel === 0 ? (
+                  /* Piano Free — link upgrade */
+                  <a href="/subscription" style={{ display: 'flex', alignItems: 'center', gap: '0.875rem', textDecoration: 'none' }}>
+                    <span style={{ fontSize: '1.25rem', flexShrink: 0 }}>🔒</span>
+                    <div>
+                      <p style={{ color: '#c4b5fd', fontWeight: 600, fontSize: '0.875rem', margin: 0 }}>Funzionalità Premium</p>
+                      <p style={{ color: '#7c6aad', fontSize: '0.75rem', margin: '0.2rem 0 0' }}>
+                        La partecipazione autonoma è disponibile dal piano Starter.{' '}
+                        <span style={{ color: '#8B5CF6', fontWeight: 600 }}>Prova gratis 7 giorni →</span>
+                      </p>
+                    </div>
+                  </a>
+                ) : (
+                  <>
+                    {/* Slider — si espande con fade quando attivo */}
+                    <div style={{
+                      maxHeight: enabled ? '360px' : '0',
+                      overflow: 'hidden',
+                      opacity: enabled ? 1 : 0,
+                      transition: 'max-height 0.32s ease, opacity 0.24s ease',
+                    }}>
+                      <div style={{ paddingBottom: '1rem', animation: enabled ? 'autonomousFadeIn 0.22s ease both' : 'none' }}>
+
+                        <p style={{ color: '#d1d5db', fontSize: '0.875rem', fontWeight: 500, margin: '0 0 1rem' }}>
+                          Quanto spesso vuoi che il bot partecipi?
+                        </p>
+
+                        {/* Slider */}
+                        <div style={{ marginBottom: '0.5rem' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.5rem' }}>
+                            <span style={{ color: '#6b7280', fontSize: '0.75rem', flexShrink: 0, width: '5rem' }}>Silenziosa</span>
+                            <input
+                              type="range"
+                              min={1}
+                              max={maxLevel}
+                              step={1}
+                              value={clampedLvl}
+                              onChange={e => set('autonomous_mode_level', Number(e.target.value))}
+                              className="autonomous-slider"
+                              style={{ flex: 1 }}
+                            />
+                            <span style={{ color: '#6b7280', fontSize: '0.75rem', flexShrink: 0, width: '5.5rem', textAlign: 'right' }}>Molto attiva</span>
+                          </div>
+                          {/* Numerini livello */}
+                          <div style={{ display: 'flex', justifyContent: 'space-between', paddingLeft: '5.75rem', paddingRight: '6.25rem' }}>
+                            {Array.from({ length: maxLevel }, (_, i) => i + 1).map(n => (
+                              <span
+                                key={n}
+                                style={{
+                                  fontSize: '0.75rem',
+                                  fontWeight: 700,
+                                  color: clampedLvl === n ? '#a78bfa' : '#2e2848',
+                                  transition: 'color 0.15s',
+                                }}
+                              >{n}</span>
+                            ))}
+                          </div>
+                        </div>
+
+                        {/* Pill livello attivo */}
+                        {info && (
+                          <div style={{
+                            display: 'inline-flex', alignItems: 'center', gap: '0.5rem',
+                            padding: '0.375rem 0.875rem', borderRadius: '9999px',
+                            backgroundColor: info.bg, color: info.color,
+                            border: `1px solid ${info.border}`,
+                            fontSize: '0.8125rem', fontWeight: 500,
+                            marginTop: '0.75rem',
+                          }}>
+                            <span style={{ fontSize: '0.875rem' }}>{info.dot}</span>
+                            {info.text}
+                          </div>
+                        )}
+
+                        {/* Warning piano Starter al livello massimo */}
+                        {plan === 'starter' && clampedLvl >= maxLevel && (
+                          <div style={{
+                            display: 'flex', alignItems: 'flex-start', gap: '0.5rem',
+                            marginTop: '0.875rem', padding: '0.625rem 0.875rem',
+                            borderRadius: '0.5rem',
+                            backgroundColor: 'rgba(250,204,21,0.05)',
+                            border: '1px solid rgba(250,204,21,0.18)',
+                            color: '#d4b83c', fontSize: '0.75rem', lineHeight: 1.5,
+                          }}>
+                            <span style={{ flexShrink: 0 }}>⚠️</span>
+                            <span>
+                              Il tuo piano Starter supporta fino al livello 2.{' '}
+                              <a href="/subscription" style={{ color: '#a78bfa', fontWeight: 600 }}>
+                                Passa a Creator per livelli più alti →
+                              </a>
+                            </span>
+                          </div>
+                        )}
+
+                      </div>
+                    </div>
+
+                    {/* Hint quando disabilitato */}
+                    {!enabled && (
+                      <p style={{ color: '#3d3558', fontSize: '0.8125rem', margin: 0 }}>
+                        Attiva il toggle per configurare la frequenza di partecipazione.
+                      </p>
+                    )}
+
+                    {/* Box informativo — sempre visibile */}
+                    <div style={{
+                      marginTop: enabled ? '0' : '1rem',
+                      padding: '0.75rem 1rem',
+                      borderRadius: '0.5rem',
+                      backgroundColor: 'rgba(139,92,246,0.04)',
+                      border: '1px solid rgba(139,92,246,0.12)',
+                      color: '#6b5fa0', fontSize: '0.75rem', lineHeight: 1.6,
+                    }}>
+                      💡 In modalità autonoma il bot commenta con messaggi brevi e naturali (max 80 caratteri) senza essere chiamato con{' '}
+                      <span style={{ color: '#8B5CF6', fontWeight: 600 }}>
+                        !{(config.bot_name || 'nomebot').toLowerCase().replace(/\s+/g, '')}
+                      </span>.{' '}
+                      <span style={{ color: '#7c6aad' }}>I messaggi autonomi non contano nel limite token mensile.</span>
+                    </div>
+                  </>
+                )}
+              </div>
+            </div>
+          );
+        })()}
+
         {/* ── LIMITI MESSAGGI PER UTENTE ── */}
         {plan !== 'free' && (() => {
           const PLAN_MSG_MAX = { starter: 10, creator: 50, elite: 100, signature: -1 };
@@ -1112,108 +1300,6 @@ export default function ConfigPage() {
         </div>
 
       </div>
-
-        {/* ── MODALITÀ AUTONOMA ── */}
-        {(() => {
-          const AUTO_MAX = { free: 0, starter: 2, creator: 3, elite: 4, signature: 5 };
-          const maxLevel = AUTO_MAX[plan] ?? 0;
-          const LEVEL_LABELS = [
-            '',
-            'Il bot commenta raramente — circa ogni 50 messaggi in chat',
-            'Il bot partecipa poco — circa ogni 20 messaggi in chat',
-            'Il bot è moderatamente attivo — circa ogni 10 messaggi in chat',
-            'Il bot partecipa spesso — circa ogni 5 messaggi in chat',
-            'Il bot è molto attivo — commenta quasi ogni conversazione',
-          ];
-          if (maxLevel === 0) {
-            return (
-              <div className="card">
-                <SectionTitle>Partecipazione autonoma</SectionTitle>
-                <SectionLock message="La partecipazione autonoma è disponibile dal piano Starter." />
-              </div>
-            );
-          }
-          const level      = Math.max(1, config.autonomous_mode_level ?? 1);
-          const isOverLimit = level > maxLevel;
-          const clampedLevel = Math.min(level, maxLevel);
-          return (
-            <div className="card">
-              <SectionTitle>Partecipazione autonoma</SectionTitle>
-
-              {/* Toggle principale */}
-              <div className="flex items-center justify-between mb-5">
-                <div>
-                  <p className="text-sm font-medium text-hally-text">Partecipazione autonoma in chat</p>
-                  <p className="text-xs text-hally-text-muted mt-0.5">Il bot interviene spontaneamente senza essere chiamato</p>
-                </div>
-                <Toggle
-                  checked={config.autonomous_mode_enabled ?? false}
-                  onChange={v => set('autonomous_mode_enabled', v)}
-                />
-              </div>
-
-              {config.autonomous_mode_enabled && (
-                <div className="space-y-4 pt-1">
-                  {/* Slider frequenza */}
-                  <div>
-                    <p className="text-sm font-medium text-hally-text mb-3">Quanto spesso vuoi che il bot partecipi spontaneamente?</p>
-                    <div className="flex items-center gap-3 mb-1">
-                      <span className="text-xs text-hally-text-muted shrink-0 w-16">Silenziosa</span>
-                      <input
-                        type="range"
-                        min={1}
-                        max={maxLevel}
-                        step={1}
-                        value={clampedLevel}
-                        onChange={e => set('autonomous_mode_level', Number(e.target.value))}
-                        className="flex-1 h-1.5 rounded-full appearance-none cursor-pointer"
-                        style={{ accentColor: '#8B5CF6' }}
-                      />
-                      <span className="text-xs text-hally-text-muted shrink-0 w-20 text-right">Molto attiva</span>
-                    </div>
-                    <div className="flex justify-between px-[68px] mb-2">
-                      {Array.from({ length: maxLevel }, (_, i) => i + 1).map(n => (
-                        <span
-                          key={n}
-                          className="text-xs font-semibold tabular-nums"
-                          style={{ color: clampedLevel === n ? '#8B5CF6' : '#4b4b4b' }}
-                        >
-                          {n}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Descrizione livello / messaggio upgrade */}
-                  {isOverLimit ? (
-                    <div
-                      className="rounded-lg px-4 py-3 text-sm flex items-start gap-2"
-                      style={{ backgroundColor: 'rgba(139,92,246,0.08)', border: '1px solid rgba(139,92,246,0.25)' }}
-                    >
-                      <span className="shrink-0">🔒</span>
-                      <span style={{ color: '#c4b5fd' }}>
-                        Il livello {level} richiede un piano superiore. Aggiorna il piano per sbloccare livelli più alti.{' '}
-                        <a href="/subscription" style={{ color: '#8B5CF6', fontWeight: 600 }}>Upgrade →</a>
-                      </span>
-                    </div>
-                  ) : (
-                    <p className="text-sm" style={{ color: '#a0a0a0' }}>
-                      {LEVEL_LABELS[clampedLevel]}
-                    </p>
-                  )}
-
-                  {/* Box informativo */}
-                  <div
-                    className="rounded-lg px-4 py-3 text-sm leading-relaxed"
-                    style={{ backgroundColor: 'rgba(139,92,246,0.06)', border: '1px solid rgba(139,92,246,0.2)', color: '#a0a0a0' }}
-                  >
-                    💡 In modalità autonoma il bot legge la chat e interviene spontaneamente con commenti brevi e naturali, senza essere chiamato. I messaggi autonomi non contano nel tuo limite mensile.
-                  </div>
-                </div>
-              )}
-            </div>
-          );
-        })()}
 
         {/* ── SPOTIFY ────────────────────────────────────────────────── */}
         {['creator', 'elite', 'signature'].includes(plan) && (
