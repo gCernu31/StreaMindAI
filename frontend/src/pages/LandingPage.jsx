@@ -115,7 +115,7 @@ const plans = [
     features: [
       'Bot AI base con personalità configurabile',
       'Max 10 membri configurabili',
-      'Risposte automatiche: follow e sub',
+      'Messaggi automatici per tutti gli eventi',
       '1,5M token AI/mese',
       'Trial 7 giorni con carta',
     ],
@@ -657,7 +657,7 @@ export default function LandingPage({ user, loading, onLogout }) {
                   boxShadow: '0 0 18px rgba(139,92,246,0.25)',
                 }}
               >
-                🎉 Beta Launch — Sii tra i primi. Trial gratuito 7 giorni.
+                ✨ Nuovo — Il bot AI per Twitch che impara da te
               </div>
 
               {/* Badge */}

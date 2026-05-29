@@ -987,7 +987,7 @@ async function buildEventMessage(streamer, eventType, data) {
   const desc = descriptions[eventType];
   if (!desc) return fallback[eventType] ?? null;
 
-  const system = `Sei ${streamer.bot_name || 'StreamBot'}, il bot del canale Twitch di ${streamer.creator_name || streamer.twitch_username}.
+  const system = `Sei ${streamer.bot_name || 'Hally'}, il bot del canale Twitch di ${streamer.creator_name || streamer.twitch_username}.
 ${streamer.bot_personality || ''}
 Scrivi un messaggio breve (max 200 caratteri) in italiano per questo evento: ${desc}.
 Rispondi SOLO con il messaggio.`;
@@ -1019,8 +1019,6 @@ async function loadActiveStreamers() {
       s.chat_messages_count,
       s.event_messages_count,
       s.monthly_reset_date,
-      s.extra_messages,
-      s.extra_messages_expiry,
       s.monthly_tokens_used,
       s.monthly_tokens_limit,
       s.extra_tokens,
@@ -2334,7 +2332,7 @@ class BotManager {
         const botCmd = '!' + (streamer.bot_name || 'streambot').toLowerCase().replace(/\s+/g, '');
         setTimeout(async () => {
           if (!this.connected) return;
-          const msg = `🎮 La live è partita! Sono ${streamer.bot_name || 'StreamBot'}, il bot AI del canale. Scrivete ${botCmd} per interagire con me!`;
+          const msg = `🎮 La live è partita! Sono ${streamer.bot_name || 'Hally'}, il bot AI del canale. Scrivete ${botCmd} per interagire con me!`;
           try { await this.client.say(channel, msg); } catch {}
         }, 60_000);
       }

@@ -223,39 +223,6 @@ export async function sendTrialActivatedEmail({ to, displayName, planName, nextB
   });
 }
 
-// ── 5. Email: analisi gratuita — report completo ──────────────────────────────
-export async function sendAnalysisReportEmail({ to, twitchUsername, analysis }) {
-  const escapedAnalysis = analysis
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/^### (.+)$/gm, '<h3 style="color:#8B5CF6;margin:20px 0 8px;font-size:14px">$1</h3>')
-    .replace(/^## (.+)$/gm, '<h2 style="color:#e0e0e0;margin:24px 0 10px;font-size:16px">$1</h2>')
-    .replace(/\*\*(.+?)\*\*/g, '<strong style="color:#e0e0e0">$1</strong>')
-    .replace(/\n- (.+)/g, '<br>• $1')
-    .replace(/\n/g, '<br>');
-
-  await sendEmail({
-    to,
-    subject: `La tua analisi StreaMindAI${twitchUsername ? ` — @${twitchUsername}` : ''}`,
-    html: wrapHtml(`
-      <h1 style="margin:0 0 8px;font-size:20px;font-weight:700;color:#ffffff">
-        La tua analisi è pronta${twitchUsername ? `, @${twitchUsername}` : ''}! 🎯
-      </h1>
-      <p style="margin:0 0 28px;font-size:14px;color:#6b6b6b">
-        Ecco cosa abbiamo trovato analizzando il tuo canale Twitch.
-      </p>
-      <div style="font-size:15px;line-height:1.7;color:#a0a0a0">
-        ${escapedAnalysis}
-      </div>
-      <div style="margin-top:32px;background:rgba(139,92,246,0.08);border:1px solid rgba(139,92,246,0.2);border-radius:12px;padding:24px;text-align:center">
-        <p style="margin:0 0 6px;font-size:15px;font-weight:700;color:#ffffff">Vuoi raggiungere questi obiettivi?</p>
-        <p style="margin:0 0 20px;font-size:14px;color:#6b6b6b">L'AI che ti aiuta attivamente ogni sera sul tuo canale Twitch.</p>
-        ${ctaButton('Inizia gratis con StreaMindAI →', `${FRONTEND}/login`)}
-      </div>
-    `),
-  });
-}
 
 // ── 5b. Email: cancellazione abbonamento ──────────────────────────────────────
 export async function sendCancellationEmail({ to, displayName, planName, activeUntil }) {

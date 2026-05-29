@@ -1,5 +1,5 @@
 -- ============================================================
--- Hally Dashboard — Schema database multi-tenant
+-- StreaMindAI — Schema database multi-tenant
 -- ============================================================
 
 -- Streamer registrati tramite Twitch OAuth
