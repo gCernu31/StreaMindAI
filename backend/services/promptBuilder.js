@@ -31,15 +31,11 @@ function tryParse(val, fallback) {
   try { return JSON.parse(val); } catch { return fallback; }
 }
 
-const DAY_MAP = {
-  Lun: 'lunedì', Mar: 'martedì', Mer: 'mercoledì',
-  Gio: 'giovedì', Ven: 'venerdì', Sab: 'sabato', Dom: 'domenica',
+const SCHED_KEY_LABELS = {
+  mon: 'lunedì', tue: 'martedì', wed: 'mercoledì',
+  thu: 'giovedì', fri: 'venerdì', sat: 'sabato', sun: 'domenica',
 };
-
-function formatDays(days) {
-  if (!Array.isArray(days) || days.length === 0) return null;
-  return days.map(d => DAY_MAP[d] ?? d).join(', ');
-}
+const SCHED_KEYS = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'];
 
 // ── generateBotPrompt ─────────────────────────────────────────────────────────
 /**
@@ -86,8 +82,8 @@ export async function generateBotPrompt(streamerId, { forceRefresh = false } = {
   const personality = cfg.bot_personality?.trim() || '';
 
   // Campi JSON (TEXT o JSONB)
-  const schedule = tryParse(cfg.stream_schedule, { days: [], time_start: '', time_end: '' });
-  const social   = tryParse(cfg.social_links,    { linktree: '', instagram: '', youtube: '' });
+  const schedule = tryParse(cfg.stream_schedule, {});
+  const social   = tryParse(cfg.social_links,    {});
   const chars    = tryParse(cfg.members,          []);
   const cmds     = tryParse(cfg.custom_commands, []).filter(c => c.active !== false);
 
@@ -125,21 +121,24 @@ export async function generateBotPrompt(streamerId, { forceRefresh = false } = {
     channelLines.push(`Canale Twitch: twitch.tv/${channelUser}`);
   }
 
-  const dayStr = formatDays(schedule.days);
-  if (dayStr) {
-    let timeStr = '';
-    if (schedule.time_start && schedule.time_end) {
-      timeStr = ` dalle ${schedule.time_start} alle ${schedule.time_end}`;
-    } else if (schedule.time_start) {
-      timeStr = ` a partire dalle ${schedule.time_start}`;
-    }
-    channelLines.push(`Orari streaming: ${dayStr}${timeStr}`);
+  // Orari streaming (nuovo formato per-giorno)
+  const activeDays = SCHED_KEYS.filter(k => Array.isArray(schedule[k]) && schedule[k].length > 0);
+  if (activeDays.length > 0) {
+    const schedLines = activeDays.map(k => {
+      const sessions = schedule[k];
+      const sessStr  = sessions.map(s => `${s.start}–${s.end}`).join(', ');
+      return `  • ${SCHED_KEY_LABELS[k]}: ${sessStr}`;
+    });
+    channelLines.push(`Orari streaming:\n${schedLines.join('\n')}`);
   }
 
   const socialLines = [];
   if (social.linktree)  socialLines.push(`Link principale: ${social.linktree}`);
   if (social.instagram) socialLines.push(`Instagram: ${social.instagram}`);
   if (social.youtube)   socialLines.push(`YouTube: ${social.youtube}`);
+  if (social.tiktok)    socialLines.push(`TikTok: ${social.tiktok}`);
+  if (social.twitter)   socialLines.push(`Twitter/X: ${social.twitter}`);
+  if (social.facebook)  socialLines.push(`Facebook: ${social.facebook}`);
   if (socialLines.length) {
     channelLines.push(`Social:\n${socialLines.map(l => `  • ${l}`).join('\n')}`);
   }

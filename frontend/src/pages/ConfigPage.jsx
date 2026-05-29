@@ -5,30 +5,30 @@ import { getToken } from '../utils/auth.js';
 import { useConfigDirty } from '../contexts/ConfigDirtyCtx.jsx';
 
 // ─── Giorni della settimana ───────────────────────────────────────────────────
-const DAYS = ['Lun', 'Mar', 'Mer', 'Gio', 'Ven', 'Sab', 'Dom'];
+const SCHEDULE_DAYS = [
+  { key: 'mon', label: 'Lun' },
+  { key: 'tue', label: 'Mar' },
+  { key: 'wed', label: 'Mer' },
+  { key: 'thu', label: 'Gio' },
+  { key: 'fri', label: 'Ven' },
+  { key: 'sat', label: 'Sab' },
+  { key: 'sun', label: 'Dom' },
+];
 
-function DayPills({ selected, onChange }) {
-  const toggle = (day) =>
-    onChange(selected.includes(day) ? selected.filter(d => d !== day) : [...selected, day]);
-  return (
-    <div className="flex flex-wrap gap-2">
-      {DAYS.map(day => (
-        <button
-          key={day}
-          type="button"
-          onClick={() => toggle(day)}
-          className="px-3 py-1.5 rounded-full text-xs font-medium transition-all duration-150 border"
-          style={
-            selected.includes(day)
-              ? { backgroundColor: 'rgba(139,92,246,0.18)', borderColor: '#8B5CF6', color: '#8B5CF6' }
-              : { backgroundColor: 'transparent', borderColor: '#262626', color: '#6b6b6b' }
-          }
-        >
-          {day}
-        </button>
-      ))}
-    </div>
-  );
+const SCHEDULE_EMPTY = { mon: [], tue: [], wed: [], thu: [], fri: [], sat: [], sun: [] };
+
+// Migra vecchio formato { days, time_start, time_end } → nuovo { mon: [{start,end}], ... }
+function migrateSchedule(raw) {
+  if (!raw) return { ...SCHEDULE_EMPTY };
+  if ('mon' in raw) return raw; // già nuovo formato
+  const OLD_DAY_MAP = { Lun: 'mon', Mar: 'tue', Mer: 'wed', Gio: 'thu', Ven: 'fri', Sab: 'sat', Dom: 'sun' };
+  const activeDays = new Set((raw.days ?? []).map(d => OLD_DAY_MAP[d]).filter(Boolean));
+  const slot = [{ start: raw.time_start ?? '21:00', end: raw.time_end ?? '00:00' }];
+  const result = { ...SCHEDULE_EMPTY };
+  for (const k of Object.keys(result)) {
+    result[k] = activeDays.has(k) ? [...slot] : [];
+  }
+  return result;
 }
 
 // ─── Toggle switch ────────────────────────────────────────────────────────────
@@ -243,8 +243,8 @@ const EMPTY = {
   creator_name: '',
   bot_personality: '',
   twitch_username: '',
-  stream_schedule: { days: [], time_start: '21:00', time_end: '00:00' },
-  social_links: { linktree: '', instagram: '', youtube: '' },
+  stream_schedule: { ...SCHEDULE_EMPTY },
+  social_links: { linktree: '', instagram: '', youtube: '', tiktok: '', twitter: '', facebook: '' },
   members: [],
   custom_commands: [],
   event_messages: { ...EMPTY_EVENT_MESSAGES },
@@ -314,8 +314,8 @@ export default function ConfigPage() {
         setConfig({
           ...EMPTY,
           ...d,
-          stream_schedule:       d.stream_schedule       ?? EMPTY.stream_schedule,
-          social_links:          d.social_links          ?? EMPTY.social_links,
+          stream_schedule:       migrateSchedule(d.stream_schedule ?? null),
+          social_links:          { ...EMPTY.social_links, ...(d.social_links ?? {}) },
           members:               (d.members ?? []).map(m => ({ ...m, id: _mid++ })),
           custom_commands:       d.custom_commands       ?? [],
           event_messages:        d.event_messages        ?? { ...EMPTY_EVENT_MESSAGES },
@@ -668,30 +668,98 @@ export default function ConfigPage() {
               />
             </Field>
 
-            <Field label="Orari streaming" hint="Seleziona i giorni in cui vai in live e l'orario di solito.">
-              <DayPills
-                selected={config.stream_schedule.days}
-                onChange={days => setNested('stream_schedule', 'days', days)}
-              />
-              <div className="flex flex-wrap items-center gap-4 mt-3">
-                <div className="flex items-center gap-2">
-                  <span className="text-xs text-hally-text-muted w-8">Dalle</span>
-                  <input
-                    type="time"
-                    className="input w-32 text-sm py-1.5"
-                    value={config.stream_schedule.time_start}
-                    onChange={e => setNested('stream_schedule', 'time_start', e.target.value)}
-                  />
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="text-xs text-hally-text-muted w-4">alle</span>
-                  <input
-                    type="time"
-                    className="input w-32 text-sm py-1.5"
-                    value={config.stream_schedule.time_end}
-                    onChange={e => setNested('stream_schedule', 'time_end', e.target.value)}
-                  />
-                </div>
+            <Field label="Orari streaming" hint="Abilita i giorni in cui vai in live e imposta gli orari. Puoi aggiungere più sessioni per lo stesso giorno.">
+              <div className="space-y-2 mt-1">
+                {SCHEDULE_DAYS.map(({ key, label }) => {
+                  const sessions = config.stream_schedule[key] ?? [];
+                  const enabled  = sessions.length > 0;
+                  return (
+                    <div key={key} className="flex items-start gap-3 min-h-[32px]">
+                      {/* Dot toggle */}
+                      <button
+                        type="button"
+                        aria-label={enabled ? `Disabilita ${label}` : `Abilita ${label}`}
+                        onClick={() => {
+                          const next = {
+                            ...config.stream_schedule,
+                            [key]: enabled ? [] : [{ start: '21:00', end: '00:00' }],
+                          };
+                          set('stream_schedule', next);
+                        }}
+                        className="mt-1.5 w-3.5 h-3.5 rounded-full border-2 shrink-0 transition-colors"
+                        style={enabled
+                          ? { backgroundColor: '#8B5CF6', borderColor: '#8B5CF6' }
+                          : { backgroundColor: 'transparent', borderColor: '#4b4b4b' }}
+                      />
+                      {/* Etichetta giorno */}
+                      <span
+                        className="text-sm w-7 shrink-0 mt-1"
+                        style={{ color: enabled ? '#e5e7eb' : '#6b7280' }}
+                      >
+                        {label}
+                      </span>
+                      {/* Sessioni */}
+                      {enabled && (
+                        <div className="flex flex-col gap-1.5">
+                          {sessions.map((sess, i) => (
+                            <div key={i} className="flex items-center gap-2 flex-wrap">
+                              <input
+                                type="time"
+                                className="input py-1 text-sm"
+                                style={{ width: '7.5rem' }}
+                                value={sess.start}
+                                onChange={e => {
+                                  const next = { ...config.stream_schedule, [key]: sessions.map((s, j) => j === i ? { ...s, start: e.target.value } : s) };
+                                  set('stream_schedule', next);
+                                }}
+                              />
+                              <span className="text-hally-text-muted text-xs">→</span>
+                              <input
+                                type="time"
+                                className="input py-1 text-sm"
+                                style={{ width: '7.5rem' }}
+                                value={sess.end}
+                                onChange={e => {
+                                  const next = { ...config.stream_schedule, [key]: sessions.map((s, j) => j === i ? { ...s, end: e.target.value } : s) };
+                                  set('stream_schedule', next);
+                                }}
+                              />
+                              {/* Bottone rimuovi (solo sessioni extra) */}
+                              {sessions.length > 1 && (
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    const next = { ...config.stream_schedule, [key]: sessions.filter((_, j) => j !== i) };
+                                    set('stream_schedule', next);
+                                  }}
+                                  className="text-sm leading-none px-1 transition-colors"
+                                  style={{ color: '#6b7280' }}
+                                  onMouseEnter={e => { e.currentTarget.style.color = '#f87171'; }}
+                                  onMouseLeave={e => { e.currentTarget.style.color = '#6b7280'; }}
+                                  aria-label="Rimuovi sessione"
+                                >×</button>
+                              )}
+                              {/* Bottone aggiungi sessione (solo sull'ultima) */}
+                              {i === sessions.length - 1 && (
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    const next = { ...config.stream_schedule, [key]: [...sessions, { start: '15:00', end: '17:00' }] };
+                                    set('stream_schedule', next);
+                                  }}
+                                  className="text-xs px-2 py-0.5 rounded-full transition-colors"
+                                  style={{ color: '#a78bfa', border: '1px solid rgba(167,139,250,0.3)' }}
+                                  onMouseEnter={e => { e.currentTarget.style.backgroundColor = 'rgba(167,139,250,0.08)'; }}
+                                  onMouseLeave={e => { e.currentTarget.style.backgroundColor = 'transparent'; }}
+                                >+ sessione</button>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
             </Field>
 
@@ -704,7 +772,7 @@ export default function ConfigPage() {
               />
             </Field>
 
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <Field label="Instagram">
                 <input
                   className="input"
@@ -719,6 +787,30 @@ export default function ConfigPage() {
                   value={config.social_links.youtube}
                   onChange={e => setNested('social_links', 'youtube', e.target.value)}
                   placeholder="youtube.com/canale"
+                />
+              </Field>
+              <Field label="TikTok">
+                <input
+                  className="input"
+                  value={config.social_links.tiktok}
+                  onChange={e => setNested('social_links', 'tiktok', e.target.value)}
+                  placeholder="@handle o tiktok.com/@handle"
+                />
+              </Field>
+              <Field label="Twitter / X">
+                <input
+                  className="input"
+                  value={config.social_links.twitter}
+                  onChange={e => setNested('social_links', 'twitter', e.target.value)}
+                  placeholder="@handle o x.com/handle"
+                />
+              </Field>
+              <Field label="Facebook">
+                <input
+                  className="input"
+                  value={config.social_links.facebook}
+                  onChange={e => setNested('social_links', 'facebook', e.target.value)}
+                  placeholder="facebook.com/pagina"
                 />
               </Field>
             </div>

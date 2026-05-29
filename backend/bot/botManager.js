@@ -1806,9 +1806,44 @@ class BotManager {
           }
         }
       } else if (tname === 'social') {
-        reply = streamer.social_links?.trim() || 'Nessun social configurato.';
+        const sl = parseJson(streamer.social_links, {});
+        const parts = [];
+        if (sl.linktree)  parts.push(sl.linktree);
+        if (sl.instagram) parts.push(`IG: ${sl.instagram}`);
+        if (sl.youtube)   parts.push(`YT: ${sl.youtube}`);
+        if (sl.tiktok)    parts.push(`TikTok: ${sl.tiktok}`);
+        if (sl.twitter)   parts.push(`X: ${sl.twitter}`);
+        if (sl.facebook)  parts.push(`FB: ${sl.facebook}`);
+        reply = parts.length > 0 ? parts.join(' | ') : 'Nessun social configurato.';
       } else if (tname === 'schedule') {
-        reply = streamer.stream_schedule?.trim() || 'Nessun orario configurato.';
+        const sched = parseJson(streamer.stream_schedule, {});
+        const SCHED_KEYS   = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'];
+        const SCHED_LABELS = { mon: 'Lun', tue: 'Mar', wed: 'Mer', thu: 'Gio', fri: 'Ven', sat: 'Sab', sun: 'Dom' };
+        const activeDays = SCHED_KEYS.filter(k => Array.isArray(sched[k]) && sched[k].length > 0);
+        if (activeDays.length === 0) {
+          reply = 'Nessun orario configurato.';
+        } else {
+          // Raggruppa per sessione primaria (prima sessione del giorno)
+          const primaryGroups = new Map();
+          const extras = [];
+          for (const k of activeDays) {
+            const sessions = sched[k];
+            const sig = `${sessions[0].start}-${sessions[0].end}`;
+            if (!primaryGroups.has(sig)) primaryGroups.set(sig, []);
+            primaryGroups.get(sig).push(k);
+            for (let ii = 1; ii < sessions.length; ii++) {
+              extras.push({ key: k, s: sessions[ii] });
+            }
+          }
+          const parts = [];
+          for (const [sig, days] of primaryGroups) {
+            parts.push(`${days.map(d => SCHED_LABELS[d]).join('-')} ${sig}`);
+          }
+          for (const { key, s } of extras) {
+            parts.push(`${SCHED_LABELS[key]} anche ${s.start}-${s.end}`);
+          }
+          reply = `📅 Orari stream: ${parts.join(' | ')}`;
+        }
       } else if (tname === 'commands') {
         const { rows: dbCmds } = await pool.query(
           'SELECT trigger FROM bot_commands WHERE streamer_id = $1 AND active = TRUE ORDER BY trigger',
