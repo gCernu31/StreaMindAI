@@ -1879,7 +1879,10 @@ class BotManager {
 
   async _handleLurk(channel, streamer, username) {
     const lurkers = lurkSessionUsers.get(streamer.streamer_id) ?? new Set();
-    if (lurkers.has(username)) return;
+    if (lurkers.has(username)) {
+      try { await this.client.say(channel, `@${username} sei già in lurk mode! 👀`); } catch {}
+      return;
+    }
     lurkers.add(username);
     lurkSessionUsers.set(streamer.streamer_id, lurkers);
 
