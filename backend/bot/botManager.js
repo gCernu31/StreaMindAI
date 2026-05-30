@@ -746,8 +746,11 @@ async function incrementUserDailyCount(streamerId, username) {
   );
 }
 
-// Restituisce il limite utente in base al piano + configurazione streamer
+// Restituisce il limite utente in base al piano + configurazione streamer.
+// Restituisce -1 se illimitato.
 function getUserLimit(streamer, isSub) {
+  if (isSub && streamer.sub_limit_unlimited) return -1;
+  if (!isSub && streamer.follower_limit_unlimited) return -1;
   const limits = getLimits(streamer.subscription_plan);
   if (isSub) {
     const custom  = streamer.user_msg_subvip;
@@ -1036,6 +1039,8 @@ async function loadActiveStreamers() {
       bc.custom_commands,
       bc.user_msg_nonsub,
       bc.user_msg_subvip,
+      bc.follower_limit_unlimited,
+      bc.sub_limit_unlimited,
       bc.song_req_nonsub,
       bc.song_req_subvip,
       bc.event_messages,

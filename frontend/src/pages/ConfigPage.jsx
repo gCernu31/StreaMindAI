@@ -251,8 +251,10 @@ const EMPTY = {
   spotify_client_id:       '',
   spotify_client_secret:   '',
   spotify_connected:       false,
-  user_msg_nonsub:         null,
-  user_msg_subvip:         null,
+  user_msg_nonsub:           null,
+  user_msg_subvip:           null,
+  follower_limit_unlimited:  false,
+  sub_limit_unlimited:       false,
   autonomous_mode_enabled: false,
   autonomous_mode_level:   1,
 };
@@ -322,8 +324,10 @@ export default function ConfigPage() {
           spotify_client_id:     d.spotify_client_id  ?? '',
           spotify_client_secret: '',
           spotify_connected:     d.spotify_connected  ?? false,
-          user_msg_nonsub:         d.user_msg_nonsub         ?? null,
-          user_msg_subvip:         d.user_msg_subvip         ?? null,
+          user_msg_nonsub:           d.user_msg_nonsub           ?? null,
+          user_msg_subvip:           d.user_msg_subvip           ?? null,
+          follower_limit_unlimited:  d.follower_limit_unlimited  ?? false,
+          sub_limit_unlimited:       d.sub_limit_unlimited       ?? false,
           autonomous_mode_enabled: d.autonomous_mode_enabled ?? false,
           autonomous_mode_level:   d.autonomous_mode_level   ?? 1,
         });
@@ -780,40 +784,76 @@ export default function ConfigPage() {
                   <label className="block text-sm font-medium mb-1.5 text-hally-text">
                     Follower / utente normale
                   </label>
-                  <input
-                    type="number"
-                    min={1}
-                    max={maxVal === -1 ? undefined : maxVal}
-                    className="input w-full"
-                    value={config.user_msg_nonsub ?? ''}
-                    onChange={e => {
-                      const v = e.target.value === '' ? null : clamp(parseInt(e.target.value, 10) || 1);
-                      set('user_msg_nonsub', v);
-                    }}
-                    placeholder={plan === 'starter' ? '3' : plan === 'creator' ? '3' : plan === 'elite' ? '5' : '10'}
-                  />
+                  <div className="flex items-center gap-3">
+                    <input
+                      type="number"
+                      min={1}
+                      max={maxVal === -1 ? undefined : maxVal}
+                      className="input flex-1"
+                      disabled={config.follower_limit_unlimited}
+                      style={config.follower_limit_unlimited ? { opacity: 0.4, cursor: 'not-allowed' } : {}}
+                      value={config.follower_limit_unlimited ? '' : (config.user_msg_nonsub ?? '')}
+                      onChange={e => {
+                        const v = e.target.value === '' ? null : clamp(parseInt(e.target.value, 10) || 1);
+                        set('user_msg_nonsub', v);
+                      }}
+                      placeholder={config.follower_limit_unlimited ? '∞' : (plan === 'starter' ? '3' : plan === 'creator' ? '3' : plan === 'elite' ? '5' : '10')}
+                    />
+                    <label className="flex items-center gap-1.5 text-sm cursor-pointer shrink-0" style={{ color: config.follower_limit_unlimited ? '#8B5CF6' : '#a0a0a0' }}>
+                      <input
+                        type="checkbox"
+                        checked={config.follower_limit_unlimited ?? false}
+                        onChange={e => {
+                          set('follower_limit_unlimited', e.target.checked);
+                          if (e.target.checked) set('user_msg_nonsub', null);
+                        }}
+                        className="w-3.5 h-3.5 rounded accent-violet-500"
+                      />
+                      Illimitato
+                    </label>
+                  </div>
                   <p className="text-xs mt-1.5 text-hally-text-muted">
-                    {maxVal === -1 ? 'Nessun limite massimo sul tuo piano' : `Massimo consentito dal tuo piano: ${maxLabel}`}
+                    {config.follower_limit_unlimited
+                      ? 'Nessun limite per i follower in questa sessione'
+                      : maxVal === -1 ? 'Nessun limite massimo sul tuo piano' : `Massimo consentito dal tuo piano: ${maxLabel}`}
                   </p>
                 </div>
                 <div>
                   <label className="block text-sm font-medium mb-1.5 text-hally-text">
                     Subscriber / VIP / Mod
                   </label>
-                  <input
-                    type="number"
-                    min={1}
-                    max={maxVal === -1 ? undefined : maxVal}
-                    className="input w-full"
-                    value={config.user_msg_subvip ?? ''}
-                    onChange={e => {
-                      const v = e.target.value === '' ? null : clamp(parseInt(e.target.value, 10) || 1);
-                      set('user_msg_subvip', v);
-                    }}
-                    placeholder={plan === 'starter' ? '10' : plan === 'creator' ? '20' : plan === 'elite' ? '30' : '50'}
-                  />
+                  <div className="flex items-center gap-3">
+                    <input
+                      type="number"
+                      min={1}
+                      max={maxVal === -1 ? undefined : maxVal}
+                      className="input flex-1"
+                      disabled={config.sub_limit_unlimited}
+                      style={config.sub_limit_unlimited ? { opacity: 0.4, cursor: 'not-allowed' } : {}}
+                      value={config.sub_limit_unlimited ? '' : (config.user_msg_subvip ?? '')}
+                      onChange={e => {
+                        const v = e.target.value === '' ? null : clamp(parseInt(e.target.value, 10) || 1);
+                        set('user_msg_subvip', v);
+                      }}
+                      placeholder={config.sub_limit_unlimited ? '∞' : (plan === 'starter' ? '10' : plan === 'creator' ? '20' : plan === 'elite' ? '30' : '50')}
+                    />
+                    <label className="flex items-center gap-1.5 text-sm cursor-pointer shrink-0" style={{ color: config.sub_limit_unlimited ? '#8B5CF6' : '#a0a0a0' }}>
+                      <input
+                        type="checkbox"
+                        checked={config.sub_limit_unlimited ?? false}
+                        onChange={e => {
+                          set('sub_limit_unlimited', e.target.checked);
+                          if (e.target.checked) set('user_msg_subvip', null);
+                        }}
+                        className="w-3.5 h-3.5 rounded accent-violet-500"
+                      />
+                      Illimitato
+                    </label>
+                  </div>
                   <p className="text-xs mt-1.5 text-hally-text-muted">
-                    {maxVal === -1 ? 'Nessun limite massimo sul tuo piano' : `Massimo consentito dal tuo piano: ${maxLabel}`}
+                    {config.sub_limit_unlimited
+                      ? 'Nessun limite per sub/VIP/mod in questa sessione'
+                      : maxVal === -1 ? 'Nessun limite massimo sul tuo piano' : `Massimo consentito dal tuo piano: ${maxLabel}`}
                   </p>
                 </div>
               </div>
@@ -1281,7 +1321,7 @@ export default function ConfigPage() {
       </div>
 
         {/* ── SPOTIFY ────────────────────────────────────────────────── */}
-        {['creator', 'elite', 'signature'].includes(plan) && (
+        {['starter', 'creator', 'elite', 'signature'].includes(plan) && (
         <div className="card space-y-5">
           <div className="flex items-center justify-between">
             <SectionTitle>Song Request — Spotify</SectionTitle>

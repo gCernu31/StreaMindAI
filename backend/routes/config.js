@@ -52,6 +52,8 @@ configRoutes.get('/', requireAuth, async (req, res) => {
       name_changes_this_month:    cfg.name_changes_this_month    ?? 0,
       user_msg_nonsub:            cfg.user_msg_nonsub            ?? null,
       user_msg_subvip:            cfg.user_msg_subvip            ?? null,
+      follower_limit_unlimited:   cfg.follower_limit_unlimited   ?? false,
+      sub_limit_unlimited:        cfg.sub_limit_unlimited        ?? false,
       autonomous_mode_enabled:    cfg.autonomous_mode_enabled    ?? false,
       autonomous_mode_level:      cfg.autonomous_mode_level      ?? 0,
       use_channel_emotes:         cfg.use_channel_emotes         ?? true,
@@ -115,6 +117,7 @@ configRoutes.put('/', requireAuth, async (req, res) => {
     event_messages,
     spotify_client_id, spotify_client_secret,
     user_msg_nonsub, user_msg_subvip,
+    follower_limit_unlimited, sub_limit_unlimited,
     autonomous_mode_enabled, autonomous_mode_level,
     use_channel_emotes,
   } = req.body;
@@ -195,12 +198,14 @@ configRoutes.put('/', requireAuth, async (req, res) => {
            event_messages         = COALESCE($11::jsonb, event_messages),
            spotify_client_id      = COALESCE($12, spotify_client_id),
            spotify_client_secret  = COALESCE($13, spotify_client_secret),
-           user_msg_nonsub        = COALESCE($14, user_msg_nonsub),
-           user_msg_subvip        = COALESCE($15, user_msg_subvip),
-           autonomous_mode_enabled = COALESCE($16, autonomous_mode_enabled),
-           autonomous_mode_level   = COALESCE($17, autonomous_mode_level),
-           use_channel_emotes      = COALESCE($18, use_channel_emotes),
-           updated_at             = NOW()
+           user_msg_nonsub           = COALESCE($14, user_msg_nonsub),
+           user_msg_subvip           = COALESCE($15, user_msg_subvip),
+           follower_limit_unlimited  = COALESCE($16, follower_limit_unlimited),
+           sub_limit_unlimited       = COALESCE($17, sub_limit_unlimited),
+           autonomous_mode_enabled   = COALESCE($18, autonomous_mode_enabled),
+           autonomous_mode_level     = COALESCE($19, autonomous_mode_level),
+           use_channel_emotes        = COALESCE($20, use_channel_emotes),
+           updated_at                = NOW()
        WHERE streamer_id = $10
        RETURNING *`,
       [
@@ -219,9 +224,11 @@ configRoutes.put('/', requireAuth, async (req, res) => {
         spotify_client_secret ? encrypt(spotify_client_secret) : null,
         user_msg_nonsub        != null ? Number(user_msg_nonsub) : null,
         user_msg_subvip        != null ? Number(user_msg_subvip) : null,
-        autonomous_mode_enabled != null ? autonomous_mode_enabled : null,
-        autonomous_mode_level   != null ? Number(autonomous_mode_level) : null,
-        use_channel_emotes      != null ? use_channel_emotes : null,
+        follower_limit_unlimited != null ? Boolean(follower_limit_unlimited) : null,
+        sub_limit_unlimited      != null ? Boolean(sub_limit_unlimited)      : null,
+        autonomous_mode_enabled  != null ? autonomous_mode_enabled : null,
+        autonomous_mode_level    != null ? Number(autonomous_mode_level) : null,
+        use_channel_emotes       != null ? use_channel_emotes : null,
       ]
     );
 
@@ -256,8 +263,10 @@ configRoutes.put('/', requireAuth, async (req, res) => {
       event_messages:   tryParse(cfg.event_messages,  {}),
       spotify_client_id: cfg.spotify_client_id ?? '',
       spotify_connected: !!cfg.spotify_access_token,
-      user_msg_nonsub:  cfg.user_msg_nonsub ?? null,
-      user_msg_subvip:  cfg.user_msg_subvip ?? null,
+      user_msg_nonsub:           cfg.user_msg_nonsub           ?? null,
+      user_msg_subvip:           cfg.user_msg_subvip           ?? null,
+      follower_limit_unlimited:  cfg.follower_limit_unlimited  ?? false,
+      sub_limit_unlimited:       cfg.sub_limit_unlimited       ?? false,
       autonomous_mode_enabled: cfg.autonomous_mode_enabled ?? false,
       autonomous_mode_level:   cfg.autonomous_mode_level   ?? 0,
       use_channel_emotes:      cfg.use_channel_emotes      ?? true,
