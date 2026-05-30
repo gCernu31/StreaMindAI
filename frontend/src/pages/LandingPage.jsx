@@ -903,9 +903,8 @@ export default function LandingPage({ user, loading, onLogout }) {
           <div className="flex flex-col md:flex-row items-start justify-between gap-10 mb-10">
             {/* Brand */}
             <div>
-              <div className="flex items-center gap-2.5 mb-3">
-                <BrainWaveLogo className="w-6 h-6" />
-                <span className="text-lg font-extrabold text-white">StreaMindAI</span>
+              <div className="flex items-center mb-3">
+                <img src="/logo-horizontal.png" alt="StreaMindAI" className="h-7 w-auto" />
               </div>
               <p className="text-sm max-w-xs" style={{ color: '#6b6b6b' }}>
                 Dai una mente alla tua stream. L'AI che trasforma il tuo canale Twitch in un'esperienza indimenticabile.
