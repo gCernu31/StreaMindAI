@@ -514,7 +514,7 @@ function Header({ user, loading, onLogout }) {
           <img
             src="/logo-horizontal.png"
             alt="StreaMindAI"
-            className="h-7 md:h-9 w-auto group-hover:opacity-80 transition-opacity"
+            className="h-10 md:h-12 w-auto group-hover:opacity-80 transition-opacity"
           />
         </a>
 
