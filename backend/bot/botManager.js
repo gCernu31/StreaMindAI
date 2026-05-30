@@ -48,6 +48,13 @@ const EVENT_COOLDOWN_MS = 30_000;
 const MSG_USER_LIMIT    = "Hai raggiunto il limite di messaggi per stasera! Chiedi allo streamer di aumentare i limiti o supporta il canale con una sub 🎵";
 const MSG_CHANNEL_LIMIT = "Il bot ha raggiunto il limite di messaggi per stasera. Scopri i piani superiori su streamindai.com 🚀";
 
+const KNOWN_BOTS = new Set([
+  'nightbot', 'streamelements', 'fossabot', 'moobot',
+  'streamlabs', 'botisimo', 'commanderroot', 'wizebot',
+  'sery_bot', 'soundalerts', 'pretzelrocks', 'streamavatars',
+  'streamindai',
+]);
+
 const PAID_PLANS    = new Set(['starter', 'creator', 'elite', 'signature']);
 const ACTIVE_STATUS = new Set(['active', 'trialing', 'cancelling']);
 
@@ -1048,7 +1055,8 @@ async function loadActiveStreamers() {
       bc.stream_schedule,
       bc.autonomous_mode_enabled,
       bc.autonomous_mode_level,
-      bc.use_channel_emotes
+      bc.use_channel_emotes,
+      bc.ignored_accounts
     FROM streamers s
     JOIN bot_configs bc ON bc.streamer_id = s.id
     WHERE s.twitch_username IS NOT NULL
@@ -1432,6 +1440,15 @@ class BotManager {
     const msg      = message.trim();
     const username = (tags.username || tags['display-name'] || 'utente').toLowerCase();
     const isSub    = isSubVip(tags);
+
+    // Ignora bot e account nella lista nera dello streamer
+    const ignoredList = streamer.ignored_accounts ?? [];
+    if (
+      tags?.badges?.bot ||
+      tags?.['user-type'] === 'bot' ||
+      KNOWN_BOTS.has(username) ||
+      ignoredList.includes(username)
+    ) return;
 
     // Contatore righe chat (per min_chat_lines degli annunci)
     const _clc = _chatLineCounters.get(streamer.streamer_id) ?? { count: 0, since: Date.now() };
@@ -2222,6 +2239,10 @@ class BotManager {
 
     const actorUsername = data.username || data.gifter || data.from || 'utente';
     if (!checkEventCooldown(streamer.streamer_id, eventType, actorUsername)) return;
+
+    // Ignora account nella lista nera
+    const ignoredList = streamer.ignored_accounts ?? [];
+    if (KNOWN_BOTS.has(actorUsername.toLowerCase()) || ignoredList.includes(actorUsername.toLowerCase())) return;
 
     // Shoutout automatico dopo raid
     if (eventType === 'raid' && data.from) {

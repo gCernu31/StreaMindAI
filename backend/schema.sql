@@ -238,6 +238,9 @@ BEGIN
   IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='bot_configs' AND column_name='sub_limit_unlimited') THEN
     ALTER TABLE bot_configs ADD COLUMN sub_limit_unlimited BOOLEAN DEFAULT FALSE;
   END IF;
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='bot_configs' AND column_name='ignored_accounts') THEN
+    ALTER TABLE bot_configs ADD COLUMN ignored_accounts TEXT[] DEFAULT '{}';
+  END IF;
 
   -- streamers: contatori messaggi mensili
   IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='streamers' AND column_name='monthly_message_count') THEN

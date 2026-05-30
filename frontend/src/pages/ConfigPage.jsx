@@ -255,6 +255,7 @@ const EMPTY = {
   user_msg_subvip:           null,
   follower_limit_unlimited:  false,
   sub_limit_unlimited:       false,
+  ignored_accounts:          [],
   autonomous_mode_enabled: false,
   autonomous_mode_level:   1,
 };
@@ -279,6 +280,7 @@ export default function ConfigPage() {
   const [membersTipsCollapsed, setMembersTipsCollapsed] = useState(
     () => localStorage.getItem('streamindai_members_tips_collapsed') === '1'
   );
+  const [ignoredInput, setIgnoredInput] = useState('');
 
   // Stato modifiche non salvate
   const { setDirty } = useConfigDirty();
@@ -328,6 +330,7 @@ export default function ConfigPage() {
           user_msg_subvip:           d.user_msg_subvip           ?? null,
           follower_limit_unlimited:  d.follower_limit_unlimited  ?? false,
           sub_limit_unlimited:       d.sub_limit_unlimited       ?? false,
+          ignored_accounts:          d.ignored_accounts          ?? [],
           autonomous_mode_enabled: d.autonomous_mode_enabled ?? false,
           autonomous_mode_level:   d.autonomous_mode_level   ?? 1,
         });
@@ -860,6 +863,73 @@ export default function ConfigPage() {
             </div>
           );
         })()}
+
+        {/* ── ACCOUNT IGNORATI ── */}
+        {plan !== 'free' && (
+          <div className="card">
+            <SectionTitle>Account ignorati</SectionTitle>
+            <p className="text-xs text-hally-text-muted mb-4">
+              StreaMindAI ignorerà completamente questi account — nessuna risposta, nessun ringraziamento, nessun conteggio. Utile per bot custom del tuo canale.
+            </p>
+            <div className="flex gap-2 mb-3">
+              <input
+                className="input flex-1"
+                placeholder="Es. nightbot, mio_bot_custom"
+                value={ignoredInput}
+                onChange={e => setIgnoredInput(e.target.value)}
+                onKeyDown={e => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    const val = ignoredInput.trim().toLowerCase();
+                    if (val && !(config.ignored_accounts ?? []).includes(val)) {
+                      set('ignored_accounts', [...(config.ignored_accounts ?? []), val]);
+                    }
+                    setIgnoredInput('');
+                  }
+                }}
+              />
+              <button
+                type="button"
+                className="btn-secondary flex items-center gap-1.5 px-3 shrink-0"
+                onClick={() => {
+                  const val = ignoredInput.trim().toLowerCase();
+                  if (val && !(config.ignored_accounts ?? []).includes(val)) {
+                    set('ignored_accounts', [...(config.ignored_accounts ?? []), val]);
+                  }
+                  setIgnoredInput('');
+                }}
+              >
+                <IconPlus /> Aggiungi
+              </button>
+            </div>
+            {(config.ignored_accounts ?? []).length > 0 && (
+              <div className="flex flex-wrap gap-2 mb-4">
+                {(config.ignored_accounts ?? []).map(acc => (
+                  <span
+                    key={acc}
+                    className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-sm"
+                    style={{ backgroundColor: 'rgba(139,92,246,0.1)', color: '#c4b5fd' }}
+                  >
+                    {acc}
+                    <button
+                      type="button"
+                      onClick={() => set('ignored_accounts', (config.ignored_accounts ?? []).filter(a => a !== acc))}
+                      className="ml-0.5 hover:opacity-70 transition-opacity"
+                      aria-label={`Rimuovi ${acc}`}
+                    >
+                      <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className="w-3 h-3">
+                        <path d="M2 2l8 8M10 2l-8 8"/>
+                      </svg>
+                    </button>
+                  </span>
+                ))}
+              </div>
+            )}
+            <p className="text-xs rounded-lg px-3 py-2.5" style={{ backgroundColor: 'rgba(139,92,246,0.06)', color: '#a0a0a0' }}>
+              💡 I bot verificati da Twitch vengono ignorati automaticamente. Usa questa lista per aggiungere bot custom o account specifici del tuo canale.
+            </p>
+          </div>
+        )}
 
         {/* ── CANALE ── */}
         <div className="card">

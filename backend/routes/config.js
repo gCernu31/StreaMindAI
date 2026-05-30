@@ -28,7 +28,7 @@ configRoutes.get('/', requireAuth, async (req, res) => {
               last_name_change, name_changes_this_month,
               user_msg_nonsub, user_msg_subvip,
               autonomous_mode_enabled, autonomous_mode_level,
-              use_channel_emotes
+              use_channel_emotes, ignored_accounts
        FROM bot_configs WHERE streamer_id = $1`,
       [req.user.streamer_id]
     );
@@ -57,6 +57,7 @@ configRoutes.get('/', requireAuth, async (req, res) => {
       autonomous_mode_enabled:    cfg.autonomous_mode_enabled    ?? false,
       autonomous_mode_level:      cfg.autonomous_mode_level      ?? 0,
       use_channel_emotes:         cfg.use_channel_emotes         ?? true,
+      ignored_accounts:           cfg.ignored_accounts           ?? [],
     });
   } catch (err) {
     console.error(err);
@@ -120,6 +121,7 @@ configRoutes.put('/', requireAuth, async (req, res) => {
     follower_limit_unlimited, sub_limit_unlimited,
     autonomous_mode_enabled, autonomous_mode_level,
     use_channel_emotes,
+    ignored_accounts,
   } = req.body;
 
   // ── Validazione lunghezza campi liberi ────────────────────────────────────────
@@ -205,6 +207,7 @@ configRoutes.put('/', requireAuth, async (req, res) => {
            autonomous_mode_enabled   = COALESCE($18, autonomous_mode_enabled),
            autonomous_mode_level     = COALESCE($19, autonomous_mode_level),
            use_channel_emotes        = COALESCE($20, use_channel_emotes),
+           ignored_accounts          = COALESCE($21, ignored_accounts),
            updated_at                = NOW()
        WHERE streamer_id = $10
        RETURNING *`,
@@ -229,6 +232,7 @@ configRoutes.put('/', requireAuth, async (req, res) => {
         autonomous_mode_enabled  != null ? autonomous_mode_enabled : null,
         autonomous_mode_level    != null ? Number(autonomous_mode_level) : null,
         use_channel_emotes       != null ? use_channel_emotes : null,
+        ignored_accounts         != null ? ignored_accounts : null,
       ]
     );
 
@@ -270,6 +274,7 @@ configRoutes.put('/', requireAuth, async (req, res) => {
       autonomous_mode_enabled: cfg.autonomous_mode_enabled ?? false,
       autonomous_mode_level:   cfg.autonomous_mode_level   ?? 0,
       use_channel_emotes:      cfg.use_channel_emotes      ?? true,
+      ignored_accounts:        cfg.ignored_accounts        ?? [],
     });
   } catch (err) {
     console.error(err);
