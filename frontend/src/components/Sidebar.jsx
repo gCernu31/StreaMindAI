@@ -154,11 +154,14 @@ export default function Sidebar({ user, onLogout, open, onClose, hasActivePlan }
         <div className="px-5 py-4 border-b border-hally-border flex items-center gap-2.5">
           <a
             href="/"
-            className="flex items-center gap-2.5 flex-1 hover:opacity-80 transition-opacity"
+            className="flex items-center flex-1 hover:opacity-80 transition-opacity"
             onClick={onClose}
           >
-            <BrainWaveLogo className="w-6 h-6" />
-            <span className="font-extrabold text-base tracking-tight text-hally-text">StreaMindAI</span>
+            <img
+              src="/logo-horizontal.png"
+              alt="StreaMindAI"
+              className="h-7 w-auto"
+            />
           </a>
           {/* ← button — solo mobile */}
           <button

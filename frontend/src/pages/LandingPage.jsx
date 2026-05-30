@@ -510,11 +510,12 @@ function Header({ user, loading, onLogout }) {
     >
       <div className="max-w-screen-2xl mx-auto px-4 h-16 flex items-center justify-between">
         {/* Logo */}
-        <a href="/" className="flex items-center gap-2.5 group">
-          <BrainWaveLogo className="w-7 h-7 group-hover:opacity-80 transition-opacity" />
-          <span className="text-xl font-extrabold text-white tracking-tight group-hover:text-[#8B5CF6] transition-colors">
-            StreaMindAI
-          </span>
+        <a href="/" className="flex items-center group">
+          <img
+            src="/logo-horizontal.png"
+            alt="StreaMindAI"
+            className="h-8 w-auto group-hover:opacity-80 transition-opacity"
+          />
         </a>
 
         {/* Nav */}
@@ -587,9 +588,13 @@ export default function LandingPage({ user, loading, onLogout }) {
         <meta property="og:url"         content="https://streamindai.com/" />
         <meta property="og:title"       content="StreaMindAI — Il Bot AI per la tua Chat Twitch | Prova Gratis" />
         <meta property="og:description" content="Crea il tuo bot AI personalizzato per Twitch in pochi minuti. StreaMindAI impara dalla tua community, risponde in chat e cresce con te. Prova gratis 7 giorni." />
+        <meta property="og:image"       content="https://streamindai.com/og-image.png" />
+        <meta property="og:image:width" content="1200" />
+        <meta property="og:image:height" content="630" />
         <meta property="og:locale"      content="it_IT" />
         <meta property="og:site_name"   content="StreaMindAI" />
         <meta name="twitter:card"        content="summary_large_image" />
+        <meta name="twitter:image"       content="https://streamindai.com/og-image.png" />
         <meta name="twitter:title"       content="StreaMindAI — Il Bot AI per la tua Chat Twitch" />
         <meta name="twitter:description" content="Crea il tuo bot AI personalizzato per Twitch in pochi minuti. Prova gratis 7 giorni." />
         <script type="application/ld+json">{JSON.stringify(STRUCTURED_DATA_APP)}</script>

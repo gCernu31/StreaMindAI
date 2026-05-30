@@ -35,7 +35,9 @@ export default function SEO({
       <meta property="og:url"         content={url} />
       <meta property="og:title"       content={fullTitle} />
       <meta property="og:description" content={fullDesc} />
-      <meta property="og:image"       content={OG_IMAGE} />
+      <meta property="og:image"        content={OG_IMAGE} />
+      <meta property="og:image:width"  content="1200" />
+      <meta property="og:image:height" content="630" />
       <meta property="og:locale"      content="it_IT" />
       <meta property="og:site_name"   content="StreaMindAI" />
 
