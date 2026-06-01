@@ -23,28 +23,37 @@ function BrainWaveLogo({ className = 'w-6 h-6' }) {
 // ---------------------------------------------------------------------------
 const months = [
   {
-    label: 'Maggio 2026',
-    badge: 'Lancio Beta',
+    label: 'Giugno 2026',
+    badge: 'Aggiornamenti',
     badgeColor: PURPLE,
     entries: [
-      { emoji: '🚀', text: 'Lancio ufficiale piattaforma StreaMindAI' },
-      { emoji: '🤖', text: 'Bot AI personalizzabile con nome, personalità e membri' },
-      { emoji: '🎵', text: 'Song request Spotify integrato' },
-      { emoji: '💾', text: 'Sistema memoria — il bot impara dalla chat' },
-      { emoji: '📊', text: 'Analisi canale gratuita con piano editoriale' },
-      { emoji: '🎮', text: 'Supporto eventi Twitch: follow, sub, gift, bit, hype train, raid' },
-      { emoji: '🎯', text: 'Shoutout automatico durante i raid' },
-      { emoji: '📱', text: 'Dashboard responsive mobile' },
-      { emoji: '🔒', text: 'Trial gratuito 7 giorni (Starter, Creator, Elite)' },
-      { emoji: '📧', text: 'Email automatiche per tutti gli eventi' },
-      { emoji: '🌐', text: 'Dominio ufficiale: streamindai.com' },
-      { emoji: '⚙️', text: 'Personalizzazione limiti messaggi e song request per piano' },
+      { emoji: '🎨', text: 'Nuovo logo e identità visiva' },
+      { emoji: '⚙️', text: 'Sistema comandi avanzato con cooldown e access level' },
+      { emoji: '📢', text: 'Annunci programmati e contatori in chat' },
+      { emoji: '📋', text: 'Template comandi pronti all\'uso' },
+      { emoji: '🤖', text: 'Modalità autonoma — il bot partecipa spontaneamente in chat' },
+      { emoji: '😄', text: 'Emote del canale integrate nelle risposte' },
+      { emoji: '🛡️', text: 'Filtro automatico contro contenuti offensivi' },
+      { emoji: '📅', text: 'Orari streaming con sessioni multiple per giorno' },
+      { emoji: '🌐', text: 'Nuovi social: TikTok, Twitter/X, Facebook' },
+      { emoji: '♾️', text: 'Opzione messaggi illimitati per utente' },
+    ],
+  },
+  {
+    label: 'Maggio 2026',
+    badge: 'Lancio Beta',
+    badgeColor: '#0ea5e9',
+    entries: [
+      { emoji: '🪙', text: 'Nuovo sistema basato su token mensili' },
+      { emoji: '📊', text: 'Dashboard rinnovata con monitoraggio in tempo reale' },
+      { emoji: '🔍', text: 'Sito indicizzato su Google' },
+      { emoji: '🔒', text: 'Sicurezza rafforzata' },
     ],
   },
   {
     label: 'Aprile 2026',
     badge: 'Sviluppo',
-    badgeColor: '#0ea5e9',
+    badgeColor: '#10b981',
     entries: [
       { emoji: '⚡', text: 'Sistema multi-tenant' },
       { emoji: '🗄️', text: 'Database PostgreSQL con memoria' },
@@ -58,7 +67,7 @@ const months = [
   {
     label: 'Marzo 2026',
     badge: 'Prototipo',
-    badgeColor: '#10b981',
+    badgeColor: '#6b7280',
     entries: [
       { emoji: '💡', text: 'Idea iniziale nata dal bot Hally di gCernu' },
       { emoji: '🔧', text: 'Prima versione bot Hally su Twitch' },
