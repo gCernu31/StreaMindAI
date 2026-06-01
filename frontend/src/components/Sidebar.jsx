@@ -151,7 +151,7 @@ export default function Sidebar({ user, onLogout, open, onClose, hasActivePlan }
         `}
       >
         {/* Logo + X (mobile) */}
-        <div className="px-5 py-4 border-b border-hally-border flex items-center gap-2.5">
+        <div className="px-5 py-2 border-b border-hally-border flex items-center gap-2.5">
           <a
             href="/"
             className="flex items-center flex-1 hover:opacity-80 transition-opacity"
@@ -160,7 +160,7 @@ export default function Sidebar({ user, onLogout, open, onClose, hasActivePlan }
             <img
               src="/logo-horizontal.png"
               alt="StreaMindAI"
-              className="h-16 md:h-20 w-auto"
+              className="h-10 w-auto"
             />
           </a>
           {/* ← button — solo mobile */}

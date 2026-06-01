@@ -506,13 +506,13 @@ function Header({ user, loading, onLogout }) {
         scrolled ? 'bg-[#0d0d0d]/95 backdrop-blur-md border-b border-[#262626]' : 'bg-transparent'
       }`}
     >
-      <div className="max-w-screen-2xl mx-auto px-4 py-4 flex items-center justify-between">
+      <div className="max-w-screen-2xl mx-auto px-4 py-2 flex items-center justify-between">
         {/* Logo */}
         <a href="/" className="flex items-center group">
           <img
             src="/logo-horizontal.png"
             alt="StreaMindAI"
-            className="h-16 md:h-20 w-auto group-hover:opacity-80 transition-opacity"
+            className="h-10 w-auto group-hover:opacity-80 transition-opacity"
           />
         </a>
 
