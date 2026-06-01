@@ -774,8 +774,8 @@ export default function SubscriptionPage() {
           Il bonus si attiva solo quando il tuo amico sottoscrive un piano.
         </p>
 
-        {referral?.link ? (
-          <div className="space-y-2">
+        <div className="space-y-2">
+          {referral?.link ? (
             <div className="flex gap-2">
               <div
                 className="flex-1 px-3 py-2.5 rounded-lg border text-sm font-mono truncate select-all"
@@ -791,16 +791,16 @@ export default function SubscriptionPage() {
                 {refCopied ? '✓ Copiato' : 'Copia link'}
               </button>
             </div>
-            <button
-              onClick={() => setShowMaterials(true)}
-              className="btn-secondary text-sm px-4 py-2.5 w-full flex items-center justify-center gap-2 transition-colors"
-            >
-              📦 Materiali promozionali
-            </button>
-          </div>
-        ) : (
-          <div className="h-10 rounded-lg animate-pulse" style={{ backgroundColor: '#1a1a1a' }} />
-        )}
+          ) : referral === null ? (
+            <div className="h-10 rounded-lg animate-pulse" style={{ backgroundColor: '#1a1a1a' }} />
+          ) : null}
+          <button
+            onClick={() => setShowMaterials(true)}
+            className="btn-secondary text-sm px-4 py-2.5 w-full flex items-center justify-center gap-2 transition-colors"
+          >
+            📦 Materiali promozionali
+          </button>
+        </div>
       </div>
 
       {/* ── Storico fatture ── */}
