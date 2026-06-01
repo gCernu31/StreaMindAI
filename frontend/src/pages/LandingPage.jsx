@@ -96,7 +96,7 @@ const plans = [
     id: 'free',
     name: 'Free',
     price: '0',
-    desc: 'Nessuna carta di credito richiesta',
+    desc: 'Inizia subito, gratis',
     features: [
       'Bot AI di base',
       'Showstarter automatico al go-live',
@@ -461,7 +461,7 @@ function DemoSection({ user }) {
                   WebkitBackgroundClip:'text', WebkitTextFillColor:'transparent', backgroundClip:'text' }}>
                 Il tuo bot può fare tutto questo — gratis
               </h3>
-              <p className="text-sm mb-4" style={{ color:'#888' }}>Piano Free attivo subito. Nessuna carta di credito richiesta.</p>
+              <p className="text-sm mb-4" style={{ color:'#888' }}>Piano Free attivo subito.</p>
               <Link to={user ? '/dashboard' : '/login'}
                 className="inline-flex items-center gap-2 font-bold text-white px-7 py-3 rounded-xl text-sm transition-all duration-150"
                 style={{ backgroundColor:'#8B5CF6', boxShadow:'0 0 22px rgba(139,92,246,0.38)' }}
@@ -471,8 +471,6 @@ function DemoSection({ user }) {
               </Link>
               <div className="flex flex-wrap items-center justify-center gap-2 mt-3">
                 <span className="text-xs" style={{ color:'#555' }}>🔒 Sicuro</span>
-                <span className="text-xs" style={{ color:'#333' }}>·</span>
-                <span className="text-xs" style={{ color:'#555' }}>✓ Nessuna carta</span>
                 <span className="text-xs" style={{ color:'#333' }}>·</span>
                 <span className="text-xs" style={{ color:'#555' }}>⚡ Attivo in 30 secondi</span>
               </div>
@@ -546,7 +544,7 @@ const STRUCTURED_DATA_APP = {
   operatingSystem: 'Web',
   url: 'https://streamindai.com',
   offers: [
-    { '@type': 'Offer', name: 'Free',      price: '0.00',   priceCurrency: 'EUR', description: 'Bot AI di base, eventi automatici, nessuna carta richiesta' },
+    { '@type': 'Offer', name: 'Free',      price: '0.00',   priceCurrency: 'EUR', description: 'Bot AI di base, eventi automatici' },
     { '@type': 'Offer', name: 'Starter',   price: '4.99',   priceCurrency: 'EUR', description: 'Bot AI base, 1,5M token AI/mese, trial 7 giorni' },
     { '@type': 'Offer', name: 'Creator',   price: '9.99',   priceCurrency: 'EUR', description: 'Song request Spotify, 8M token AI/mese, trial 7 giorni' },
     { '@type': 'Offer', name: 'Elite',     price: '19.99',  priceCurrency: 'EUR', description: 'Analytics, memoria avanzata, 25M token AI/mese, trial 7 giorni' },
