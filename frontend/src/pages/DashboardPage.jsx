@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { getToken } from '../utils/auth.js';
 import { useBotStatus } from '../contexts/BotStatusCtx.jsx';
+import PromoMaterialsModal from '../components/PromoMaterialsModal.jsx';
 
 // ---------------------------------------------------------------------------
 // Limiti token mensili per piano (in milioni per leggibilità)
@@ -590,7 +591,8 @@ function MemoryFeed({ memories }) {
 // ---------------------------------------------------------------------------
 
 function ReferralCard({ code, link, activeReferrals, creditsEarned }) {
-  const [copied, setCopied] = useState(false);
+  const [copied, setCopied]           = useState(false);
+  const [showMaterials, setShowMaterials] = useState(false);
 
   const copyLink = useCallback(() => {
     if (!link) return;
@@ -601,58 +603,78 @@ function ReferralCard({ code, link, activeReferrals, creditsEarned }) {
   }, [link]);
 
   return (
-    <div className="card">
-      <div className="flex items-center justify-between mb-4">
-        <h2 className="text-sm font-semibold text-hally-text">Invita un amico</h2>
-        <span className="text-xs font-semibold px-2 py-0.5 rounded-full"
-          style={{ background: 'rgba(139,92,246,0.1)', color: '#8B5CF6', border: '1px solid rgba(139,92,246,0.2)' }}>
-          Referral
-        </span>
+    <>
+      <div className="card">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-sm font-semibold text-hally-text">Invita un amico</h2>
+          <span className="text-xs font-semibold px-2 py-0.5 rounded-full"
+            style={{ background: 'rgba(139,92,246,0.1)', color: '#8B5CF6', border: '1px solid rgba(139,92,246,0.2)' }}>
+            Referral
+          </span>
+        </div>
+
+        {code ? (
+          <>
+            {/* Link copiabile */}
+            <div className="flex items-center gap-2 p-3 rounded-lg mb-4"
+              style={{ background: '#111', border: '1px solid #222' }}>
+              <span className="flex-1 text-xs truncate font-mono" style={{ color: '#8B5CF6' }}>
+                {link}
+              </span>
+              <button
+                onClick={copyLink}
+                className="shrink-0 text-xs font-semibold px-3 py-1.5 rounded-lg transition-all duration-150"
+                style={copied
+                  ? { background: 'rgba(34,197,94,0.15)', color: '#4ade80', border: '1px solid rgba(34,197,94,0.3)' }
+                  : { background: 'rgba(139,92,246,0.15)', color: '#8B5CF6', border: '1px solid rgba(139,92,246,0.3)' }
+                }
+              >
+                {copied ? '✓ Copiato' : 'Copia'}
+              </button>
+            </div>
+
+            {/* Statistiche */}
+            <div className="grid grid-cols-2 gap-3 mb-4">
+              <div className="text-center p-3 rounded-lg" style={{ background: '#111', border: '1px solid #1a1a1a' }}>
+                <p className="text-2xl font-extrabold text-hally-text">{activeReferrals}</p>
+                <p className="text-xs text-hally-text-muted mt-0.5">Referral attivi</p>
+              </div>
+              <div className="text-center p-3 rounded-lg" style={{ background: '#111', border: '1px solid #1a1a1a' }}>
+                <p className="text-2xl font-extrabold" style={{ color: '#8B5CF6' }}>{creditsEarned}</p>
+                <p className="text-xs text-hally-text-muted mt-0.5">Sconti ottenuti</p>
+              </div>
+            </div>
+
+            <p className="text-xs text-hally-text-muted leading-relaxed" style={{ borderTop: '1px solid #1e1e1e', paddingTop: '12px' }}>
+              Chi si abbona tramite il tuo link: riceve <strong className="text-hally-text">14 giorni</strong> di trial.
+              Tu guadagni <strong className="text-hally-text">15% di sconto</strong> sul prossimo rinnovo per ogni abbonato attivo.
+            </p>
+          </>
+        ) : (
+          <p className="text-xs text-hally-text-muted text-center py-6">
+            Codice referral non ancora assegnato.
+          </p>
+        )}
+
+        {/* Bottone materiali — sempre visibile */}
+        <button
+          onClick={() => setShowMaterials(true)}
+          className="mt-4 w-full flex items-center justify-center gap-2 text-xs font-semibold px-3 py-2.5 rounded-lg transition-all duration-150"
+          style={{ background: 'rgba(139,92,246,0.1)', color: '#c4b5fd', border: '1px solid rgba(139,92,246,0.25)' }}
+          onMouseEnter={e => e.currentTarget.style.background = 'rgba(139,92,246,0.18)'}
+          onMouseLeave={e => e.currentTarget.style.background = 'rgba(139,92,246,0.1)'}
+        >
+          📦 Materiali promozionali
+        </button>
       </div>
 
-      {code ? (
-        <>
-          {/* Link copiabile */}
-          <div className="flex items-center gap-2 p-3 rounded-lg mb-4"
-            style={{ background: '#111', border: '1px solid #222' }}>
-            <span className="flex-1 text-xs truncate font-mono" style={{ color: '#8B5CF6' }}>
-              {link}
-            </span>
-            <button
-              onClick={copyLink}
-              className="shrink-0 text-xs font-semibold px-3 py-1.5 rounded-lg transition-all duration-150"
-              style={copied
-                ? { background: 'rgba(34,197,94,0.15)', color: '#4ade80', border: '1px solid rgba(34,197,94,0.3)' }
-                : { background: 'rgba(139,92,246,0.15)', color: '#8B5CF6', border: '1px solid rgba(139,92,246,0.3)' }
-              }
-            >
-              {copied ? '✓ Copiato' : 'Copia'}
-            </button>
-          </div>
-
-          {/* Statistiche */}
-          <div className="grid grid-cols-2 gap-3 mb-4">
-            <div className="text-center p-3 rounded-lg" style={{ background: '#111', border: '1px solid #1a1a1a' }}>
-              <p className="text-2xl font-extrabold text-hally-text">{activeReferrals}</p>
-              <p className="text-xs text-hally-text-muted mt-0.5">Referral attivi</p>
-            </div>
-            <div className="text-center p-3 rounded-lg" style={{ background: '#111', border: '1px solid #1a1a1a' }}>
-              <p className="text-2xl font-extrabold" style={{ color: '#8B5CF6' }}>{creditsEarned}</p>
-              <p className="text-xs text-hally-text-muted mt-0.5">Sconti ottenuti</p>
-            </div>
-          </div>
-
-          <p className="text-xs text-hally-text-muted leading-relaxed" style={{ borderTop: '1px solid #1e1e1e', paddingTop: '12px' }}>
-            Chi si abbona tramite il tuo link: riceve <strong className="text-hally-text">14 giorni</strong> di trial.
-            Tu guadagni <strong className="text-hally-text">15% di sconto</strong> sul prossimo rinnovo per ogni abbonato attivo.
-          </p>
-        </>
-      ) : (
-        <p className="text-xs text-hally-text-muted text-center py-6">
-          Codice referral non ancora assegnato.
-        </p>
+      {showMaterials && (
+        <PromoMaterialsModal
+          onClose={() => setShowMaterials(false)}
+          referralLink={link ?? ''}
+        />
       )}
-    </div>
+    </>
   );
 }
 
