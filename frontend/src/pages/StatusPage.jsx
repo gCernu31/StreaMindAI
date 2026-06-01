@@ -248,9 +248,9 @@ export default function StatusPage({ user, loading, onLogout }) {
 
       {/* Navbar sticky */}
       <header style={{ position: 'sticky', top: 0, zIndex: 50, backgroundColor: 'rgba(13,13,13,0.9)', backdropFilter: 'blur(12px)', borderBottom: '1px solid #1a1a1a' }}>
-        <div className="max-w-3xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between">
+        <div className="max-w-3xl mx-auto px-4 sm:px-6 py-4 flex items-center justify-between">
           <Link to="/" className="hover:opacity-80 transition-opacity">
-            <img src="/logo-horizontal.png" alt="StreaMindAI" className="h-10 md:h-14 w-auto max-w-[200px] md:max-w-[280px]" />
+            <img src="/logo-horizontal.png" alt="StreaMindAI" className="h-16 md:h-20 w-auto" />
           </Link>
           <div className="flex items-center gap-4">
             <Link to="/changelog" style={{ fontSize: 13, color: '#6b6b6b', textDecoration: 'none' }}
