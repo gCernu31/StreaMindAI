@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import axios from 'axios';
 import { getToken } from '../utils/auth.js';
+import PromoMaterialsModal from '../components/PromoMaterialsModal.jsx';
 
 // ─── Piani ────────────────────────────────────────────────────────────────────
 const PLANS = [
@@ -302,6 +303,7 @@ export default function SubscriptionPage() {
   const [tokenPackBanner, setTokenPackBanner]   = useState(null); // 'success'|'cancelled'|null
   const [referral, setReferral]                 = useState(null);
   const [refCopied, setRefCopied]               = useState(false);
+  const [showMaterials, setShowMaterials]       = useState(false);
   const [billingPeriod, setBillingPeriod]       = useState('monthly');
 
   const headers = () => ({ Authorization: `Bearer ${getToken()}` });
@@ -773,19 +775,27 @@ export default function SubscriptionPage() {
         </p>
 
         {referral?.link ? (
-          <div className="flex gap-2">
-            <div
-              className="flex-1 px-3 py-2.5 rounded-lg border text-sm font-mono truncate select-all"
-              style={{ backgroundColor: 'rgba(139,92,246,0.04)', borderColor: 'rgba(139,92,246,0.2)', color: '#8B5CF6' }}
-            >
-              {referral.link}
+          <div className="space-y-2">
+            <div className="flex gap-2">
+              <div
+                className="flex-1 px-3 py-2.5 rounded-lg border text-sm font-mono truncate select-all"
+                style={{ backgroundColor: 'rgba(139,92,246,0.04)', borderColor: 'rgba(139,92,246,0.2)', color: '#8B5CF6' }}
+              >
+                {referral.link}
+              </div>
+              <button
+                onClick={handleCopyRef}
+                className="btn-secondary text-sm px-4 whitespace-nowrap shrink-0 transition-colors"
+                style={refCopied ? { color: '#4ade80', borderColor: 'rgba(74,222,128,0.3)' } : {}}
+              >
+                {refCopied ? '✓ Copiato' : 'Copia link'}
+              </button>
             </div>
             <button
-              onClick={handleCopyRef}
-              className="btn-secondary text-sm px-4 whitespace-nowrap shrink-0 transition-colors"
-              style={refCopied ? { color: '#4ade80', borderColor: 'rgba(74,222,128,0.3)' } : {}}
+              onClick={() => setShowMaterials(true)}
+              className="btn-secondary text-sm px-4 py-2.5 w-full flex items-center justify-center gap-2 transition-colors"
             >
-              {refCopied ? '✓ Copiato' : 'Copia link'}
+              📦 Materiali promozionali
             </button>
           </div>
         ) : (
@@ -864,6 +874,14 @@ export default function SubscriptionPage() {
 
       {/* ── Modal contatto Signature ── */}
       {showContact && <SignatureContactModal onClose={() => setShowContact(false)} />}
+
+      {/* ── Modal materiali promozionali ── */}
+      {showMaterials && (
+        <PromoMaterialsModal
+          onClose={() => setShowMaterials(false)}
+          referralLink={referral?.link ?? ''}
+        />
+      )}
     </div>
   );
 }
