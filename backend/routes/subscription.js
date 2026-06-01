@@ -486,6 +486,15 @@ export async function stripeWebhook(req, res) {
            WHERE stripe_subscription_id = $1`,
           [sub.id]
         );
+        const { rows: disableRows } = await pool.query(
+          'SELECT twitch_username FROM streamers WHERE stripe_customer_id = $1',
+          [sub.customer]
+        );
+        if (disableRows[0]?.twitch_username) {
+          botManager.disableBot(disableRows[0].twitch_username).catch(e =>
+            console.warn('[Webhook] disableBot dopo delete sub:', e.message)
+          );
+        }
         break;
       }
 

@@ -34,7 +34,7 @@ import {
   sendBotOfflineEmail,
   sendBotOnlineEmail,
 } from '../services/emailService.js';
-import { decrypt } from '../utils/encryption.js';
+import { decrypt, encrypt } from '../utils/encryption.js';
 
 // ─── Costanti ─────────────────────────────────────────────────────────────────
 const EVENTSUB_SECRET = process.env.EVENTSUB_SECRET;
@@ -584,6 +584,45 @@ async function markNeedsReauth(streamerId, username) {
     .catch(e => console.warn('[Auth] markNeedsReauth:', e.message));
 }
 
+async function refreshTwitchToken(streamerId, username) {
+  const cid    = process.env.TWITCH_CLIENT_ID;
+  const secret = process.env.TWITCH_CLIENT_SECRET;
+  if (!cid || !secret) return null;
+  try {
+    const { rows } = await pool.query(
+      'SELECT twitch_refresh_token FROM streamers WHERE id = $1',
+      [streamerId]
+    );
+    const encRefresh = rows[0]?.twitch_refresh_token;
+    if (!encRefresh) { markNeedsReauth(streamerId, username); return null; }
+    const r = await axios.post(
+      'https://id.twitch.tv/oauth2/token',
+      new URLSearchParams({
+        grant_type:    'refresh_token',
+        refresh_token: decrypt(encRefresh),
+        client_id:     cid,
+        client_secret: secret,
+      }).toString(),
+      { headers: { 'Content-Type': 'application/x-www-form-urlencoded' } }
+    );
+    const { access_token, refresh_token: new_refresh } = r.data;
+    await pool.query(
+      `UPDATE streamers
+       SET twitch_access_token  = $1,
+           twitch_refresh_token = $2,
+           needs_reauth         = FALSE
+       WHERE id = $3`,
+      [encrypt(access_token), encrypt(new_refresh), streamerId]
+    );
+    console.log(`[Auth] Token Twitch refreshato per @${username}`);
+    return access_token;
+  } catch (e) {
+    console.warn(`[Auth] refreshTwitchToken @${username}:`, e.response?.data ?? e.message);
+    markNeedsReauth(streamerId, username);
+    return null;
+  }
+}
+
 async function getStreamerToken(streamerId, username) {
   try {
     const { rows } = await pool.query(
@@ -591,8 +630,7 @@ async function getStreamerToken(streamerId, username) {
       [streamerId]
     );
     if (!rows[0]?.twitch_access_token) {
-      markNeedsReauth(streamerId, username);
-      return null;
+      return await refreshTwitchToken(streamerId, username);
     }
     return decrypt(rows[0].twitch_access_token);
   } catch (e) {
@@ -657,7 +695,23 @@ async function registerEventSub(broadcasterId, streamer) {
       } else {
         console.warn(`[EventSub] ${sub.type} @${streamer.twitch_username}: ${e.response?.data?.message ?? e.message}`);
         if (sub.needsUserToken && (status === 401 || status === 403)) {
-          markNeedsReauth(streamer.streamer_id, streamer.twitch_username);
+          const refreshed = await refreshTwitchToken(streamer.streamer_id, streamer.twitch_username);
+          if (refreshed) {
+            userToken = refreshed;
+            // Riprova questa subscription con il token fresco
+            try {
+              await axios.post(
+                'https://api.twitch.tv/helix/eventsub/subscriptions',
+                { type: sub.type, version: sub.ver, condition, transport: { method: 'webhook', callback, secret: EVENTSUB_SECRET } },
+                { headers: { 'Client-ID': cid, Authorization: `Bearer ${refreshed}`, 'Content-Type': 'application/json' } }
+              );
+            } catch (retryErr) {
+              const retryStatus = retryErr.response?.status;
+              if (retryStatus !== 409) {
+                console.warn(`[EventSub] retry fallito ${sub.type} @${streamer.twitch_username}:`, retryErr.response?.data?.message ?? retryErr.message);
+              }
+            }
+          }
         }
       }
     }
