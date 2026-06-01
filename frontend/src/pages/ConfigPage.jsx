@@ -1391,7 +1391,7 @@ export default function ConfigPage() {
       </div>
 
         {/* ── SPOTIFY ────────────────────────────────────────────────── */}
-        {['starter', 'creator', 'elite', 'signature'].includes(plan) && (
+        {['creator', 'elite', 'signature'].includes(plan) && (
         <div className="card space-y-5">
           <div className="flex items-center justify-between">
             <SectionTitle>Song Request — Spotify</SectionTitle>

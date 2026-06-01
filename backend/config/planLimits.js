@@ -36,7 +36,7 @@ export const PLAN_LIMITS = {
     monthlyMessages:           1_500_000, // compat legacy
 
     members:             10,
-    songRequest:         true,
+    songRequest:         false,
     memory:              false,
     analytics:           false,
     customEventMessages: false,
