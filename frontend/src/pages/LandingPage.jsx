@@ -514,7 +514,7 @@ function Header({ user, loading, onLogout }) {
           <img
             src="/logo-horizontal.png"
             alt="StreaMindAI"
-            className="h-14 md:h-16 w-auto group-hover:opacity-80 transition-opacity"
+            className="h-10 md:h-14 w-auto max-w-[200px] md:max-w-[280px] group-hover:opacity-80 transition-opacity"
           />
         </a>
 
@@ -904,7 +904,7 @@ export default function LandingPage({ user, loading, onLogout }) {
             {/* Brand */}
             <div>
               <div className="flex items-center mb-3">
-                <img src="/logo-horizontal.png" alt="StreaMindAI" className="h-14 md:h-16 w-auto" />
+                <img src="/logo-horizontal.png" alt="StreaMindAI" className="h-10 md:h-14 w-auto max-w-[200px] md:max-w-[280px]" />
               </div>
               <p className="text-sm max-w-xs" style={{ color: '#6b6b6b' }}>
                 Dai una mente alla tua stream. L'AI che trasforma il tuo canale Twitch in un'esperienza indimenticabile.

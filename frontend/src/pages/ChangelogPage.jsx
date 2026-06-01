@@ -88,7 +88,7 @@ export default function ChangelogPage({ user, loading, onLogout }) {
         className="sticky top-0 z-50">
         <div className="max-w-5xl mx-auto px-6 h-16 flex items-center justify-between">
           <Link to="/" className="hover:opacity-80 transition-opacity">
-            <img src="/logo-horizontal.png" alt="StreaMindAI" className="h-14 md:h-16 w-auto" />
+            <img src="/logo-horizontal.png" alt="StreaMindAI" className="h-10 md:h-14 w-auto max-w-[200px] md:max-w-[280px]" />
           </Link>
           <nav className="hidden md:flex items-center gap-6 text-sm" style={{ color: '#a0a0a0' }}>
             <Link to="/#features" className="hover:text-white transition-colors">Funzionalità</Link>

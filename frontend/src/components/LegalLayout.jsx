@@ -57,7 +57,7 @@ export default function LegalLayout({ title, description, canonical, lastUpdate,
       <header style={{ borderBottom: '1px solid #1e1e1e', background: 'rgba(10,10,10,0.95)', backdropFilter: 'blur(12px)' }} className="sticky top-0 z-50">
         <div className="max-w-3xl mx-auto px-6 h-16 flex items-center justify-between">
           <Link to="/" className="hover:opacity-80 transition-opacity">
-            <img src="/logo-horizontal.png" alt="StreaMindAI" className="h-14 md:h-16 w-auto" />
+            <img src="/logo-horizontal.png" alt="StreaMindAI" className="h-10 md:h-14 w-auto max-w-[200px] md:max-w-[280px]" />
           </Link>
           <Link to="/" className="text-sm transition-colors" style={{ color: '#6b6b6b' }}
             onMouseEnter={e => (e.currentTarget.style.color = '#fff')}
