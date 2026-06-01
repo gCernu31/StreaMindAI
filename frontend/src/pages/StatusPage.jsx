@@ -249,9 +249,8 @@ export default function StatusPage({ user, loading, onLogout }) {
       {/* Navbar sticky */}
       <header style={{ position: 'sticky', top: 0, zIndex: 50, backgroundColor: 'rgba(13,13,13,0.9)', backdropFilter: 'blur(12px)', borderBottom: '1px solid #1a1a1a' }}>
         <div className="max-w-3xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between">
-          <Link to="/" className="flex items-center gap-2.5">
-            <BrainWaveLogo className="w-7 h-7" />
-            <span style={{ fontWeight: 700, fontSize: 15, color: '#e0e0e0', letterSpacing: '-0.3px' }}>StreaMindAI</span>
+          <Link to="/" className="hover:opacity-80 transition-opacity">
+            <img src="/logo-horizontal.png" alt="StreaMindAI" className="h-14 md:h-16 w-auto" />
           </Link>
           <div className="flex items-center gap-4">
             <Link to="/changelog" style={{ fontSize: 13, color: '#6b6b6b', textDecoration: 'none' }}

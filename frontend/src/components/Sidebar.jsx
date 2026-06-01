@@ -160,7 +160,7 @@ export default function Sidebar({ user, onLogout, open, onClose, hasActivePlan }
             <img
               src="/logo-horizontal.png"
               alt="StreaMindAI"
-              className="h-10 md:h-12 w-auto"
+              className="h-14 md:h-16 w-auto"
             />
           </a>
           {/* ← button — solo mobile */}

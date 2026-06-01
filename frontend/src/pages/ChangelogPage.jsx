@@ -87,9 +87,8 @@ export default function ChangelogPage({ user, loading, onLogout }) {
       <header style={{ borderBottom: '1px solid #1e1e1e', background: 'rgba(10,10,10,0.95)', backdropFilter: 'blur(12px)' }}
         className="sticky top-0 z-50">
         <div className="max-w-5xl mx-auto px-6 h-16 flex items-center justify-between">
-          <Link to="/" className="flex items-center gap-2.5 hover:opacity-80 transition-opacity">
-            <BrainWaveLogo className="w-6 h-6" />
-            <span className="text-base font-extrabold tracking-tight" style={{ color: '#fff' }}>StreaMindAI</span>
+          <Link to="/" className="hover:opacity-80 transition-opacity">
+            <img src="/logo-horizontal.png" alt="StreaMindAI" className="h-14 md:h-16 w-auto" />
           </Link>
           <nav className="hidden md:flex items-center gap-6 text-sm" style={{ color: '#a0a0a0' }}>
             <Link to="/#features" className="hover:text-white transition-colors">Funzionalità</Link>
