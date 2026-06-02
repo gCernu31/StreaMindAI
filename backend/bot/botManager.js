@@ -1491,6 +1491,22 @@ class BotManager {
   }
 
   // Ri-registra EventSub dopo re-autenticazione Twitch (aggiorna token in memoria)
+  // Aggiorna in-memory config di un canale dopo salvataggio dashboard
+  async refreshStreamerConfig(twitchUsername) {
+    const ch = twitchUsername.toLowerCase();
+    if (!this.channelMap[ch]) return;
+    try {
+      const streamers = await loadActiveStreamers();
+      const fresh = streamers.find(x => x.twitch_username.toLowerCase() === ch);
+      if (fresh) {
+        this.channelMap[ch] = fresh;
+        console.log(`[Bot] Config aggiornata per @${ch} dopo salvataggio dashboard`);
+      }
+    } catch (e) {
+      console.warn(`[Bot] refreshStreamerConfig @${ch}:`, e.message);
+    }
+  }
+
   async refreshEventSub(twitchUsername) {
     const ch = twitchUsername.toLowerCase();
     if (!process.env.TWITCH_CLIENT_ID || !process.env.APP_URL) return;

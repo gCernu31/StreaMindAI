@@ -383,7 +383,18 @@ export default function ConfigPage() {
     setSaveState('saving');
     try {
       const token = getToken();
-      await axios.put('/api/config', config, { headers: { Authorization: `Bearer ${token}` } });
+      const res = await axios.put('/api/config', config, { headers: { Authorization: `Bearer ${token}` } });
+      // Aggiorna lo stato dal DB per evitare desync tra UI e valori effettivamente salvati
+      if (res.data?.success) {
+        setConfig(prev => ({
+          ...prev,
+          ...res.data,
+          // mantieni campi frontend-only che il server non restituisce
+          members:               prev.members,
+          custom_commands:       prev.custom_commands,
+          spotify_client_secret: '',
+        }));
+      }
       setSaveState('saved');
       setRestoreNotice(null);
       setNameChangeError(null);

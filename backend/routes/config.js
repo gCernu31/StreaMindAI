@@ -252,6 +252,12 @@ configRoutes.put('/', requireAuth, async (req, res) => {
 
     invalidateBotPromptCache(req.user.streamer_id);
 
+    // Aggiorna immediatamente il channelMap del bot — senza aspettare _syncChannels (5 min)
+    const twitchUsernameForBot = rows[0].twitch_username;
+    if (twitchUsernameForBot) {
+      botManager.refreshStreamerConfig(twitchUsernameForBot).catch(() => {});
+    }
+
     const cfg = rows[0];
     res.json({
       success:          true,
