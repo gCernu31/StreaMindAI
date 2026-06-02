@@ -1149,7 +1149,7 @@ async function resetMonthlyIfNeeded(streamer) {
   const now       = new Date();
   const resetDate = streamer.tokens_reset_at ? new Date(streamer.tokens_reset_at) : now;
   const stale     = resetDate.getMonth() !== now.getMonth() || resetDate.getFullYear() !== now.getFullYear();
-  if (!stale) return streamer.monthly_tokens_used ?? 0;
+  if (!stale) return Number(streamer.monthly_tokens_used ?? 0);
   await pool.query(
     `UPDATE streamers
      SET monthly_tokens_used = 0,
@@ -2270,7 +2270,7 @@ class BotManager {
          WHERE id = $1`,
         [streamer.streamer_id, tokensConsumed, extraDeduct]
       ));
-      streamer.monthly_tokens_used = (streamer.monthly_tokens_used ?? 0) + tokensConsumed;
+      streamer.monthly_tokens_used = Number(streamer.monthly_tokens_used ?? 0) + Number(tokensConsumed);
     } else {
       counterOps.push(pool.query(
         'UPDATE streamers SET chat_messages_count = chat_messages_count + 1, monthly_message_count = monthly_message_count + 1 WHERE id = $1',
