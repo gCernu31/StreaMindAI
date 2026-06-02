@@ -1798,6 +1798,29 @@ class BotManager {
     }
   }
 
+  // ── Ricarica annunci in tempo reale dopo modifica dashboard ──────────────
+  async reloadAnnouncements(streamerId) {
+    const streamer = Object.values(this.channelMap).find(s => s.streamer_id === streamerId);
+    const isLive   = !!_announcementTimers.get(streamerId);
+    const isOffline = !!_offlineAnnouncementTimers.get(streamerId);
+
+    if (isLive || streamer) {
+      // Ricostruisce i timer online se lo streamer era live
+      await this._startAnnouncements(streamerId);
+      console.log(`[Announcements] Ricaricati timer online per streamer_id=${streamerId}`);
+    }
+    if (isOffline) {
+      await this._startOfflineAnnouncements(streamerId);
+      console.log(`[Announcements] Ricaricati timer offline per streamer_id=${streamerId}`);
+    }
+  }
+
+  // ── Ricarica descrizioni emote personalizzate dopo modifica dashboard ─────
+  async reloadEmotes(streamerId) {
+    await this._loadEmotes(streamerId);
+    console.log(`[Emotes] Cache emote ricaricata per streamer_id=${streamerId}`);
+  }
+
   // ── Comandi DB personalizzati ─────────────────────────────────────────────
   async _handleDbCommand(channel, tags, streamer, lowerMsg) {
     const streamerId = streamer.streamer_id;

@@ -1,7 +1,7 @@
 import express from 'express';
 import pool from '../db.js';
 import { authenticateToken } from '../middleware/auth.js';
-import { getCachedTwitchEmotes, fetchAndCacheTwitchEmotes } from '../bot/botManager.js';
+import { getCachedTwitchEmotes, fetchAndCacheTwitchEmotes, botManager } from '../bot/botManager.js';
 
 export const commandsRoutes = express.Router();
 commandsRoutes.use(authenticateToken);
@@ -215,6 +215,7 @@ commandsRoutes.post('/announcements', async (req, res) => {
         }
       }
       await client.query('COMMIT');
+      botManager.reloadAnnouncements(streamerId).catch(() => {});
       res.status(201).json({ ...ann, messages: messages.filter(m => m?.trim()) });
     } catch (e) {
       await client.query('ROLLBACK');
@@ -289,6 +290,7 @@ commandsRoutes.put('/announcements/:id', async (req, res) => {
         }
       }
       await client.query('COMMIT');
+      botManager.reloadAnnouncements(streamerId).catch(() => {});
       res.json({ ...rows[0], messages: messages ?? undefined });
     } catch (e) {
       await client.query('ROLLBACK');
@@ -304,10 +306,12 @@ commandsRoutes.put('/announcements/:id', async (req, res) => {
 
 commandsRoutes.delete('/announcements/:id', async (req, res) => {
   try {
+    const streamerId = req.user.streamer_id;
     await pool.query(
       'DELETE FROM bot_announcements WHERE id = $1 AND streamer_id = $2',
-      [req.params.id, req.user.streamer_id]
+      [req.params.id, streamerId]
     );
+    botManager.reloadAnnouncements(streamerId).catch(() => {});
     res.json({ ok: true });
   } catch (err) {
     console.error(err);
@@ -374,6 +378,7 @@ commandsRoutes.put('/emotes', async (req, res) => {
     } finally {
       client.release();
     }
+    botManager.reloadEmotes(streamerId).catch(() => {});
     res.json({ ok: true });
   } catch (err) {
     console.error(err);
