@@ -1201,6 +1201,7 @@ class BotManager {
     this._monitorStarted     = false;
     this._notifiedStreamers  = [];   // snapshot streamer notificati (per invio recovery)
     this._emoteRefreshInterval = null;
+    this._joiningChannels    = new Set(); // lock anti-doppio-join
   }
 
   // ── Avvio ──────────────────────────────────────────────────────────────────
@@ -1355,10 +1356,17 @@ class BotManager {
       this._emoteRefreshInterval = null;
     }
     console.log(`[Bot] Riavvio tra ${delayMs / 1000}s...`);
-    setTimeout(() => {
+    setTimeout(async () => {
+      // Disconnette esplicitamente il vecchio client prima di crearne uno nuovo.
+      // Senza questo, il vecchio client tmi.js rimane connesso e continua a
+      // triggerare on('message') → risposte doppie.
+      if (this.client) {
+        try { await this.client.disconnect(); } catch {}
+      }
       this._restarting = false;
-      this.channelMap  = {};
-      this.client      = null;
+      this.channelMap       = {};
+      this._joiningChannels = new Set();
+      this.client           = null;
       this.start();
     }, delayMs);
   }
@@ -1373,7 +1381,8 @@ class BotManager {
       streamers.forEach(s => { newMap[s.twitch_username.toLowerCase()] = s; });
 
       for (const [ch, s] of Object.entries(newMap)) {
-        if (!this.channelMap[ch]) {
+        if (!this.channelMap[ch] && !this._joiningChannels.has(ch)) {
+          this._joiningChannels.add(ch);
           try {
             await this.client.join(ch);
             this.channelMap[ch] = s;
@@ -1395,8 +1404,10 @@ class BotManager {
             if (s.twitch_id) fetchAndCacheTwitchEmotes(s.streamer_id, s.twitch_id).catch(() => {});
           } catch (e) {
             console.warn(`[Bot] Join #${ch}:`, e.message);
+          } finally {
+            this._joiningChannels.delete(ch);
           }
-        } else {
+        } else if (this.channelMap[ch]) {
           this.channelMap[ch] = s; // aggiorna dati (piano, contatori, ecc.)
         }
       }
@@ -1417,7 +1428,8 @@ class BotManager {
   async joinChannel(twitchUsername) {
     if (!this.connected || !this.client) return;
     const ch = twitchUsername.toLowerCase();
-    if (this.channelMap[ch]) return;
+    if (this.channelMap[ch] || this._joiningChannels.has(ch)) return;
+    this._joiningChannels.add(ch);
     try {
       const streamers = await loadActiveStreamers();
       const s = streamers.find(x => x.twitch_username.toLowerCase() === ch);
@@ -1435,6 +1447,8 @@ class BotManager {
       }
     } catch (e) {
       console.error(`[Bot] joinChannel #${ch}:`, e.message);
+    } finally {
+      this._joiningChannels.delete(ch);
     }
   }
 
@@ -2052,12 +2066,17 @@ class BotManager {
     const tokensUsedSoFar = await resetMonthlyIfNeeded(streamer);
 
     // ── Gate token mensile ───────────────────────────────────────────────────
-    const tokenLimit  = streamer.monthly_tokens_limit ?? limits.monthlyTokens ?? 0;
+    // Usa monthly_tokens_limit dal DB se > 0, altrimenti fallback al limite del piano.
+    // ?? non basta: 0 è falsy ma non nullish, quindi serve il controllo esplicito.
+    const tokenLimit = (streamer.monthly_tokens_limit > 0)
+      ? streamer.monthly_tokens_limit
+      : (limits.monthlyTokens ?? 0);
     const tokenBudget = tokenLimit - tokensUsedSoFar;
     const hasExtraTokens = (streamer.extra_tokens ?? 0) > 0 &&
       streamer.extra_tokens_expires_at != null &&
       new Date(streamer.extra_tokens_expires_at) > new Date();
     if (tokenLimit > 0 && tokenBudget <= 0 && !hasExtraTokens) {
+      console.warn(`[Bot] BLOCK token-mensili @${streamer.twitch_username} (${username}): usati=${tokensUsedSoFar} limit=${tokenLimit} piano=${streamer.subscription_plan}`);
       try { await this.client.say(channel, MSG_CHANNEL_LIMIT); } catch {}
       return;
     }
@@ -2066,6 +2085,7 @@ class BotManager {
     const session = getSessionCount(streamer.streamer_id);
     if (limits.channelMessagesPerSession !== -1 &&
         session.count >= limits.channelMessagesPerSession) {
+      console.warn(`[Bot] BLOCK sessione-canale @${streamer.twitch_username} (${username}): count=${session.count} max=${limits.channelMessagesPerSession} piano=${streamer.subscription_plan}`);
       try { await this.client.say(channel, MSG_CHANNEL_LIMIT); } catch {}
       return;
     }
@@ -2075,6 +2095,7 @@ class BotManager {
     if (userLimit !== -1) {
       const userCount = await getUserDailyCount(streamer.streamer_id, username);
       if (userCount >= userLimit) {
+        console.warn(`[Bot] BLOCK limite-utente @${streamer.twitch_username} (${username}): count=${userCount} max=${userLimit} isSub=${isSub}`);
         try { await this.client.say(channel, `@${username} ${MSG_USER_LIMIT}`); } catch {}
         return;
       }
