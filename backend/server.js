@@ -171,6 +171,41 @@ app.use('/api/status',      statusRoutes);
 app.use('/api/users',       usersRoutes);
 app.use('/api/commands',   commandsRoutes);
 
+// ── Debug temporaneo: utilizzo zampe97ttv ────────────────────────────────────
+app.get('/api/debug/zampe', async (req, res) => {
+  if (req.query.key !== 'streamind-debug-2026') return res.status(401).json({ error: 'non autorizzato' });
+  try {
+    const streamer = await pool.query(`
+      SELECT id, twitch_username, subscription_plan, subscription_status,
+             subscription_started_at, subscription_current_period_end,
+             monthly_tokens_used, monthly_tokens_limit, extra_tokens,
+             bot_active, created_at
+      FROM streamers WHERE twitch_username = 'zampe97ttv'
+    `);
+    console.log('===ZAMPE-DATA===', JSON.stringify(streamer.rows, null, 2));
+
+    const usage = await pool.query(`
+      SELECT usage_date, SUM(count) as responses, COUNT(DISTINCT username) as users
+      FROM bot_daily_usage
+      WHERE streamer_id = (SELECT id FROM streamers WHERE twitch_username = 'zampe97ttv')
+      GROUP BY usage_date ORDER BY usage_date
+    `);
+    console.log('===ZAMPE-USAGE===', JSON.stringify(usage.rows, null, 2));
+
+    const topUsers = await pool.query(`
+      SELECT username, SUM(count) as total_responses
+      FROM bot_daily_usage
+      WHERE streamer_id = (SELECT id FROM streamers WHERE twitch_username = 'zampe97ttv')
+      GROUP BY username ORDER BY total_responses DESC LIMIT 20
+    `);
+
+    res.json({ streamer: streamer.rows, usage: usage.rows, top_users: topUsers.rows });
+  } catch (err) {
+    console.error('===ZAMPE-ERROR===', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // ── React Router catch-all (produzione) ──────────────────────────────────────
 // DEVE stare dopo tutte le route API
 if (isProd) {
